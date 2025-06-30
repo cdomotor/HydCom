@@ -15,8 +15,7 @@ jobs:
         with:
           node-version: 20
 
-      - run: npm install --legacy-peer-deps
-
+      - run: npm ci || npm install
       - run: npm install -g expo-cli
 
       - name: Publish to Expo
