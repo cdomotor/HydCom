@@ -1,0 +1,14 @@
+{
+  "name": "React Native with Expo",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "msjsdiag.vscode-react-native",
+        "ms-vscode.js-debug",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "postCreateCommand": "npm install --legacy-peer-deps && npm install -g expo-cli"
+}
