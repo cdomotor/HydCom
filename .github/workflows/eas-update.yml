@@ -17,9 +17,9 @@ jobs:
 
       - run: npm install --legacy-peer-deps
 
-      - run: npm install -g expo-cli eas-cli
+      - run: npm install -g expo-cli
 
       - name: Publish to Expo
-        run: eas update --branch preview --non-interactive
+        run: npx eas-cli update --branch preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
