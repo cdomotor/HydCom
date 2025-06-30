@@ -19,6 +19,7 @@ import {
   validateSurveyPoint,
   formatElevation 
 } from '../utils/calculations';
+import CrossSectionChart from './CrossSectionChart';
 
 const SurveyForm = ({ visible, onClose, onSave, location }) => {
   const [surveyData, setSurveyData] = useState({
