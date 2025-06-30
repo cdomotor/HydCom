@@ -1,0 +1,77 @@
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, Button, Alert, ScrollView } from 'react-native';
+import * as Location from 'expo-location';
+
+export default function App() {
+  const [location, setLocation] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permission to access location was denied');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+    })();
+  }, []);
+
+  const refreshLocation = async () => {
+    let newLocation = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
+    setLocation(newLocation);
+  };
+
+  let text = 'Waiting for location...';
+  if (errorMsg) {
+    text = errorMsg;
+  } else if (location) {
+    text = `Lat: ${location.coords.latitude.toFixed(6)}\nLon: ${location.coords.longitude.toFixed(6)}\nAlt: ${location.coords.altitude?.toFixed(1) || 'N/A'}m\nAccuracy: ${location.coords.accuracy?.toFixed(1) || 'N/A'}m`;
+  }
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Hydrographer's Companion</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>GPS Location</Text>
+        <Text style={styles.locationText}>{text}</Text>
+        <Button title="Refresh Location" onPress={refreshLocation} />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingTop: 50,
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  section: {
+    marginBottom: 30,
+    padding: 15,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  locationText: {
+    fontSize: 16,
+    marginBottom: 15,
+    fontFamily: 'monospace',
+  },
+});

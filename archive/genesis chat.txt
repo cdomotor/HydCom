@@ -1,0 +1,1015 @@
+import React, { useState } from 'react';
+import { Modal, ScrollView, Text, View, TextInput, Button, Alert, TouchableOpacity } from 'react-native';
+import { styles } from '../styles/AppStyles';
+import { 
+  calculateElevation, 
+  calculateRiseFall, 
+  calculateSurveyStats,
+  calculateNewInstrumentHeight,
+  validateSurveyPoint,
+  formatElevation 
+} from '../utils/calculations';
+
+const SurveyForm = ({ visible, onClose, onSave, location }) => {
+  const [surveyData, setSurveyData] = useState({
+    id: '',
+    notes: '',
+    points: [],
+    width: 0,
+    maxDepth: 0,
+    avgDepth: 0,
+    startElevation: null,
+    endElevation: null,
+    misclose: null,
+    miscloseTolerance: 0.01,
+    instrumentHeight: null,
+    changePoints: []
+  });
+
+  const [newPoint, setNewPoint] = useState({
+    distance: '',
+    backsight: '',
+    foresight: '',
+    depth: '',
+    comment: '',
+    pointType: 'backsight' // Start with backsight as per proper workflow
+  });
+
+  const [editingPointIndex, setEditingPointIndex] = useState(null);
+  const [showWorkflow, setShowWorkflow] = useState(false);
+
+  const formatLocation = () => {
+    if (!location) return 'GPS location required';
+    
+    const lat = location.coords.latitude.toFixed(6);
+    const lon = location.coords.longitude.toFixed(6);
+    const alt = location.coords.altitude ? location.coords.altitude.toFixed(1) : 'N/A';
+    const acc = location.coords.accuracy ? location.coords.accuracy.toFixed(1) : 'N/A';
+    
+    return `Lat: ${lat}\nLon: ${lon}\nAlt: ${alt}m\nAccuracy: ±${acc}m`;
+  };
+
+  const getCurrentInstrumentHeight = () => {
+    const changePoints = surveyData.changePoints;
+    if (changePoints.length > 0) {
+      return changePoints[changePoints.length - 1].newInstrumentHeight;
+    }
+    return surveyData.instrumentHeight;
+  };
+
+  const getPreviewElevationAndRiseFall = () => {
+    const backsight = parseFloat(newPoint.backsight);
+    const foresight = parseFloat(newPoint.foresight);
+    const currentIH = getCurrentInstrumentHeight();
+    
+    if (currentIH === null) return null;
+    
+    let elevation = null;
+    if (!isNaN(backsight)) {
+      elevation = currentIH + backsight;
+    } else if (!isNaN(foresight)) {
+      elevation = currentIH - foresight;
+    }
+    
+    if (elevation === null) return null;
+    
+    const lastPoint = surveyData.points.length > 0 
+      ? surveyData.points[surveyData.points.length - 1] 
+      : null;
+    
+    const riseFall = lastPoint ? calculateRiseFall(elevation, lastPoint.elevation) : null;
+    
+    // Calculate total elevation from start
+    const startElevation = surveyData.points.length > 0 ? surveyData.points[0].elevation : null;
+    const totalFromStart = startElevation ? elevation - startElevation : null;
+    
+    return { elevation, riseFall, totalFromStart, startElevation };
+  };
+
+  const clearComment = () => {
+    setNewPoint(prev => ({ ...prev, comment: '' }));
+  };
+
+  const addQuickComments = (comment1, comment2) => {
+    const current = newPoint.comment.trim();
+    let newComment = '';
+    
+    if (current === '') {
+      newComment = `${comment1}, ${comment2}`;
+    } else {
+      newComment = `${current}, ${comment1}, ${comment2}`;
+    }
+    
+    setNewPoint(prev => ({ ...prev, comment: newComment }));
+  };
+
+  const editPoint = (index) => {
+    const point = surveyData.points[index];
+    setNewPoint({
+      distance: point.distance.toString(),
+      backsight: point.backsight ? point.backsight.toString() : '',
+      foresight: point.foresight ? point.foresight.toString() : '',
+      depth: point.depth ? point.depth.toString() : '',
+      comment: point.comment || '',
+      pointType: point.pointType || 'normal'
+    });
+    setEditingPointIndex(index);
+  };
+
+  const cancelEdit = () => {
+    setNewPoint({
+      distance: '',
+      backsight: '',
+      foresight: '',
+      depth: '',
+      comment: '',
+      pointType: 'backsight' // Reset to start of workflow
+    });
+    setEditingPointIndex(null);
+  };
+
+  const generateVisualization = () => {
+    if (surveyData.points.length < 2) return null;
+    
+    const points = surveyData.points;
+    const maxDistance = Math.max(...points.map(p => p.distance));
+    const minElevation = Math.min(...points.map(p => p.elevation));
+    const maxElevation = Math.max(...points.map(p => p.elevation));
+    
+    // Create SVG path for cross-section
+    const width = 300;
+    const height = 150;
+    const padding = 20;
+    
+    const xScale = (distance) => padding + (distance / maxDistance) * (width - 2 * padding);
+    const yScale = (elevation) => height - padding - ((elevation - minElevation) / (maxElevation - minElevation)) * (height - 2 * padding);
+    
+    // Create ground line path
+    let groundPath = `M ${xScale(points[0].distance)} ${yScale(points[0].elevation)}`;
+    points.forEach(point => {
+      groundPath += ` L ${xScale(point.distance)} ${yScale(point.elevation)}`;
+    });
+    
+    // Create water line path if there's water depth
+    let waterPath = '';
+    const hasWater = points.some(p => p.depth > 0);
+    if (hasWater) {
+      const waterPoints = points.filter(p => p.depth > 0);
+      if (waterPoints.length > 0) {
+        waterPath = `M ${xScale(waterPoints[0].distance)} ${yScale(waterPoints[0].waterLevel)}`;
+        waterPoints.forEach(point => {
+          waterPath += ` L ${xScale(point.distance)} ${yScale(point.waterLevel)}`;
+        });
+      }
+    }
+    
+    return {
+      width,
+      height,
+      groundPath,
+      waterPath,
+      points: points.map(point => ({
+        x: xScale(point.distance),
+        y: yScale(point.elevation),
+        distance: point.distance,
+        elevation: point.elevation,
+        depth: point.depth,
+        comment: point.comment
+      })),
+      hasWater,
+      minElevation,
+      maxElevation,
+      maxDistance
+    };
+  };
+
+  const setInstrumentHeight = () => {
+    Alert.alert(
+      'Set Instrument Height (IH)',
+      'Instrument Height is the height of your level/theodolite above the datum.\n\nMeasurement: Use a staff to measure from your datum point (benchmark) up to the center of your instrument\'s telescope.\n\nThis establishes your reference height for all elevation calculations.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Set Height', 
+          onPress: () => {
+            Alert.prompt(
+              'Enter Instrument Height',
+              'Height in meters (e.g., 1.540)',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                  text: 'Set', 
+                  onPress: (value) => {
+                    const height = parseFloat(value);
+                    if (!isNaN(height) && height > 0) {
+                      setSurveyData(prev => ({
+                        ...prev,
+                        instrumentHeight: height
+                      }));
+                    }
+                  }
+                }
+              ],
+              'plain-text',
+              surveyData.instrumentHeight?.toString() || ''
+            );
+          }
+        }
+      ]
+    );
+  };
+
+  const setMiscloseTolerance = () => {
+    Alert.prompt(
+      'Set Misclose Tolerance',
+      'Enter tolerance in millimeters (default: 10mm)',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Set', 
+          onPress: (value) => {
+            const toleranceMm = parseFloat(value);
+            if (!isNaN(toleranceMm) && toleranceMm > 0) {
+              setSurveyData(prev => ({
+                ...prev,
+                miscloseTolerance: toleranceMm / 1000
+              }));
+            }
+          }
+        }
+      ],
+      'plain-text',
+      (surveyData.miscloseTolerance * 1000).toString()
+    );
+  };
+
+  const addSurveyPoint = () => {
+    const distance = parseFloat(newPoint.distance);
+    const backsight = newPoint.backsight ? parseFloat(newPoint.backsight) : null;
+    const foresight = newPoint.foresight ? parseFloat(newPoint.foresight) : null;
+    const depth = parseFloat(newPoint.depth || '0');
+    const comment = newPoint.comment.trim();
+
+    // Validation
+    const validation = validateSurveyPoint(
+      { ...newPoint, distance, backsight, foresight, depth },
+      getCurrentInstrumentHeight()
+    );
+
+    if (!validation.isValid) {
+      Alert.alert('Validation Error', validation.errors.join('\n'));
+      return;
+    }
+
+    // Calculate elevation
+    const currentIH = getCurrentInstrumentHeight();
+    const elevation = calculateElevation(currentIH, backsight, foresight);
+    
+    if (elevation === null) {
+      Alert.alert('Error', 'Could not calculate elevation');
+      return;
+    }
+
+    // Calculate rise/fall
+    const previousElevation = surveyData.points.length > 0 
+      ? surveyData.points[surveyData.points.length - 1].elevation 
+      : null;
+    
+    const riseFall = calculateRiseFall(elevation, previousElevation);
+
+    const point = {
+      distance: distance,
+      elevation: elevation,
+      backsight: backsight,
+      foresight: foresight,
+      depth: depth,
+      comment: comment,
+      pointType: newPoint.pointType,
+      waterLevel: elevation - depth,
+      rise: riseFall.rise,
+      fall: riseFall.fall,
+      difference: riseFall.difference,
+      instrumentHeight: currentIH
+    };
+
+    let updatedPoints;
+    let updatedChangePoints = [...surveyData.changePoints];
+
+    if (editingPointIndex !== null) {
+      // Update existing point
+      updatedPoints = [...surveyData.points];
+      updatedPoints[editingPointIndex] = point;
+      setEditingPointIndex(null);
+    } else {
+      // Add new point
+      updatedPoints = [...surveyData.points, point];
+    }
+
+    // Handle change point
+    if (newPoint.pointType === 'changepoint' && editingPointIndex === null) {
+      if (backsight === null || foresight === null) {
+        Alert.alert('Error', 'Change points require both backsight and foresight readings');
+        return;
+      }
+      
+      const newInstrumentHeight = calculateNewInstrumentHeight(elevation, backsight);
+      
+      const changePoint = {
+        pointIndex: updatedPoints.length - 1,
+        elevation: elevation,
+        backsight: backsight,
+        foresight: foresight,
+        oldInstrumentHeight: currentIH,
+        newInstrumentHeight: newInstrumentHeight,
+        distance: distance,
+        comment: comment
+      };
+      
+      updatedChangePoints.push(changePoint);
+    }
+
+    const stats = calculateSurveyStats(updatedPoints);
+
+    setSurveyData(prev => ({
+      ...prev,
+      points: updatedPoints,
+      changePoints: updatedChangePoints,
+      ...stats
+    }));
+
+    setNewPoint({
+      distance: '',
+      backsight: '',
+      foresight: '',
+      depth: '',
+      comment: '',
+      pointType: 'normal'
+    });
+
+    // Check misclose tolerance
+    if (stats.misclose !== null && stats.misclose > surveyData.miscloseTolerance) {
+      Alert.alert(
+        'Misclose Warning',
+        `Misclose: ${(stats.misclose * 1000).toFixed(1)}mm\nTolerance: ${(surveyData.miscloseTolerance * 1000).toFixed(1)}mm\n\nThis exceeds the acceptable tolerance.`,
+        [{ text: 'OK', style: 'default' }]
+      );
+    }
+  };
+
+  const removeLastPoint = () => {
+    if (surveyData.points.length === 0) return;
+    
+    const lastPointIndex = surveyData.points.length - 1;
+    const wasChangePoint = surveyData.changePoints.some(cp => cp.pointIndex === lastPointIndex);
+    
+    let updatedChangePoints = surveyData.changePoints;
+    if (wasChangePoint) {
+      updatedChangePoints = surveyData.changePoints.filter(cp => cp.pointIndex !== lastPointIndex);
+    }
+    
+    const updatedPoints = surveyData.points.slice(0, -1);
+    const stats = calculateSurveyStats(updatedPoints);
+
+    setSurveyData(prev => ({
+      ...prev,
+      points: updatedPoints,
+      changePoints: updatedChangePoints,
+      ...stats
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!surveyData.id.trim()) {
+      Alert.alert('Error', 'Survey ID is required');
+      return;
+    }
+
+    if (surveyData.points.length < 2) {
+      Alert.alert('Error', 'At least 2 survey points are required');
+      return;
+    }
+
+    const success = await onSave(surveyData);
+    if (success !== false) {
+      handleClose();
+    }
+  };
+
+  const handleClose = () => {
+    setSurveyData({
+      id: '',
+      notes: '',
+      points: [],
+      width: 0,
+      maxDepth: 0,
+      avgDepth: 0,
+      startElevation: null,
+      endElevation: null,
+      misclose: null,
+      miscloseTolerance: 0.01,
+      instrumentHeight: null,
+      changePoints: []
+    });
+    setNewPoint({
+      distance: '',
+      backsight: '',
+      foresight: '',
+      depth: '',
+      comment: '',
+      pointType: 'normal'
+    });
+    setEditingPointIndex(null);
+    setShowWorkflow(false);
+    onClose();
+  };
+
+  const getMiscloseStatus = () => {
+    if (surveyData.misclose === null) return null;
+    
+    const isWithinTolerance = surveyData.misclose <= surveyData.miscloseTolerance;
+    return {
+      value: surveyData.misclose,
+      status: isWithinTolerance ? 'good' : 'warning',
+      color: isWithinTolerance ? '#28a745' : '#dc3545'
+    };
+  };
+
+  const preview = getPreviewElevationAndRiseFall();
+  const visualization = generateVisualization();
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <ScrollView style={styles.modalContainer}>
+        <Text style={styles.formTitle}>Cross-Section Survey</Text>
+        
+        <View style={styles.formSection}>
+          <Text style={styles.label}>Survey ID:</Text>
+          <TextInput
+            style={styles.input}
+            value={surveyData.id}
+            onChangeText={(text) => setSurveyData(prev => ({ ...prev, id: text }))}
+            placeholder="e.g., XS-001, Station-A-CS1"
+            autoCapitalize="characters"
+          />
+        </View>
+
+        {/* Survey Workflow Guide */}
+        <View style={styles.workflowGuide}>
+          <TouchableOpacity 
+            style={styles.workflowHeader}
+            onPress={() => setShowWorkflow(!showWorkflow)}
+          >
+            <Text style={styles.workflowTitle}>📋 Survey Workflow Guide</Text>
+            <Text style={styles.workflowToggle}>{showWorkflow ? '▼' : '▶'}</Text>
+          </TouchableOpacity>
+          
+          {showWorkflow && (
+            <View style={styles.workflowContent}>
+              <Text style={styles.workflowStep}>
+                <Text style={styles.stepNumber}>1.</Text> <Text style={styles.stepTitle}>Setup & Backsight:</Text> Set instrument height, then take Backsight reading on known benchmark
+              </Text>
+              <Text style={styles.workflowStep}>
+                <Text style={styles.stepNumber}>2.</Text> <Text style={styles.stepTitle}>Intermediate Readings:</Text> Take Intermediate readings on all cross-section points (most of your work)
+              </Text>
+              <Text style={styles.workflowStep}>
+                <Text style={styles.stepNumber}>3.</Text> <Text style={styles.stepTitle}>Change Points (if needed):</Text> If instrument must move, take Foresight + new Backsight
+              </Text>
+              <Text style={styles.workflowStep}>
+                <Text style={styles.stepNumber}>4.</Text> <Text style={styles.stepTitle}>Close Survey:</Text> Finish with Foresight reading back to original benchmark
+              </Text>
+              <View style={styles.workflowNote}>
+                <Text style={styles.noteTitle}>🎯 For Misclose Calculation:</Text>
+                <Text style={styles.noteText}>
+                  End your survey by shooting back to the starting benchmark. The difference between start and end elevations gives you the misclose.
+                </Text>
+              </View>
+              <View style={styles.workflowReminder}>
+                <Text style={styles.reminderText}>
+                  💡 Remember: "Begin on a Backsight, and Finish on a Foresight"
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.surveyStats}>
+          <View style={styles.statsHeader}>
+            <Text style={styles.statsTitle}>Survey Statistics</Text>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity onPress={setInstrumentHeight} style={styles.toleranceButton}>
+                <Text style={styles.toleranceButtonText}>Set IH</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={setMiscloseTolerance} style={styles.toleranceButton}>
+                <Text style={styles.toleranceButtonText}>Tolerance</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <Text style={styles.statsText}>
+            Instrument Height: {formatElevation(getCurrentInstrumentHeight()) || 'Not Set'}m
+          </Text>
+          <Text style={styles.statsText}>Points: {surveyData.points.length}</Text>
+          <Text style={styles.statsText}>Change Points: {surveyData.changePoints.length}</Text>
+          <Text style={styles.statsText}>Width: {surveyData.width.toFixed(2)}m</Text>
+          <Text style={styles.statsText}>Max Depth: {surveyData.maxDepth.toFixed(2)}m</Text>
+          <Text style={styles.statsText}>Avg Depth: {surveyData.avgDepth.toFixed(2)}m</Text>
+          {surveyData.misclose !== null && (
+            <View style={styles.miscloseContainer}>
+              <Text style={[styles.miscloseText, { color: getMiscloseStatus().color }]}>
+                Misclose: {(surveyData.misclose * 1000).toFixed(1)}mm
+              </Text>
+              <Text style={styles.toleranceText}>
+                Tolerance: {(surveyData.miscloseTolerance * 1000).toFixed(1)}mm
+              </Text>
+              <Text style={styles.elevationText}>
+                Start: {formatElevation(surveyData.startElevation)}m | End: {formatElevation(surveyData.endElevation)}m
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.pointEntry}>
+          <Text style={styles.label}>Add Survey Point:</Text>
+          
+          {/* Point Type Selection */}
+          <View style={styles.pointTypeContainer}>
+            <Text style={styles.pointLabel}>Point Type:</Text>
+            <View style={styles.pointTypeButtons}>
+              <TouchableOpacity 
+                style={[styles.typeButton, newPoint.pointType === 'backsight' && styles.typeButtonActive]}
+                onPress={() => setNewPoint(prev => ({ ...prev, pointType: 'backsight' }))}
+              >
+                <Text style={[styles.typeButtonText, newPoint.pointType === 'backsight' && styles.typeButtonTextActive]}>Backsight</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.typeButton, newPoint.pointType === 'intermediate' && styles.typeButtonActive]}
+                onPress={() => setNewPoint(prev => ({ ...prev, pointType: 'intermediate' }))}
+              >
+                <Text style={[styles.typeButtonText, newPoint.pointType === 'intermediate' && styles.typeButtonTextActive]}>Intermediate</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.typeButton, newPoint.pointType === 'foresight' && styles.typeButtonActive]}
+                onPress={() => setNewPoint(prev => ({ ...prev, pointType: 'foresight' }))}
+              >
+                <Text style={[styles.typeButtonText, newPoint.pointType === 'foresight' && styles.typeButtonTextActive]}>Foresight</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.typeButton, newPoint.pointType === 'changepoint' && styles.typeButtonActive]}
+                onPress={() => setNewPoint(prev => ({ ...prev, pointType: 'changepoint' }))}
+              >
+                <Text style={[styles.typeButtonText, newPoint.pointType === 'changepoint' && styles.typeButtonTextActive]}>Change Point</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Real-time Preview */}
+          {preview && (
+            <View style={styles.previewContainer}>
+              <Text style={styles.previewTitle}>Elevation Preview:</Text>
+              <Text style={styles.previewElevation}>
+                Point Elevation: {preview.elevation.toFixed(3)}m
+              </Text>
+              {preview.riseFall && (
+                <View>
+                  <Text style={styles.previewSubtitle}>Change from last point:</Text>
+                  {preview.riseFall.rise !== null && preview.riseFall.rise > 0 && (
+                    <Text style={styles.riseText}>Rise: {preview.riseFall.rise.toFixed(3)}m ↗</Text>
+                  )}
+                  {preview.riseFall.fall !== null && preview.riseFall.fall > 0 && (
+                    <Text style={styles.fallText}>Fall: {preview.riseFall.fall.toFixed(3)}m ↘</Text>
+                  )}
+                  {preview.riseFall.difference === 0 && (
+                    <Text style={styles.levelText}>Level: 0.000m →</Text>
+                  )}
+                </View>
+              )}
+              {preview.totalFromStart !== null && (
+                <View>
+                  <Text style={styles.previewSubtitle}>Total from start:</Text>
+                  <Text style={[styles.previewElevation, {fontSize: 12}]}>
+                    {preview.totalFromStart > 0 ? '+' : ''}{preview.totalFromStart.toFixed(3)}m from first point
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          <View style={styles.surveyingTip}>
+            <Text style={styles.tipTitle}>💡 Surveying Workflow:</Text>
+            <Text style={styles.tipText}>
+              "Begin on a Backsight, and Finish on a Foresight"
+            </Text>
+            <Text style={styles.tipDetails}>
+              • <Text style={{fontWeight: 'bold'}}>Backsight (BS)</Text>: First reading on known point (establishes IH)
+              • <Text style={{fontWeight: 'bold'}}>Intermediate (IS)</Text>: Readings on unknown points (same instrument setup)
+              • <Text style={{fontWeight: 'bold'}}>Foresight (FS)</Text>: Final reading before moving instrument
+              • <Text style={{fontWeight: 'bold'}}>Change Point</Text>: FS + BS combined (instrument move)
+            </Text>
+          </View>
+
+          <View style={styles.inputModeContainer}>
+            <Text style={styles.pointLabel}>Reading Type:</Text>
+            <View style={styles.inputModeButtons}>
+              {newPoint.pointType === 'backsight' && (
+                <Text style={styles.inputModeHint}>✅ Correct! Start with Backsight reading on known benchmark</Text>
+              )}
+              {newPoint.pointType === 'intermediate' && (
+                <Text style={styles.inputModeHint}>📍 Intermediate reading - most common during survey</Text>
+              )}
+              {newPoint.pointType === 'foresight' && (
+                <Text style={styles.inputModeHint}>🏁 Foresight reading - end of survey or before instrument move</Text>
+              )}
+              {newPoint.pointType === 'changepoint' && (
+                <Text style={styles.inputModeHint}>🔄 Change Point - both FS and BS readings needed</Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.pointInputGrid}>
+            <View style={styles.pointInputHalf}>
+              <Text style={styles.pointLabel}>Distance (m)</Text>
+              <TextInput
+                style={styles.smallInput}
+                value={newPoint.distance}
+                onChangeText={(text) => setNewPoint(prev => ({ ...prev, distance: text }))}
+                placeholder="0.0"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            <View style={styles.pointInputHalf}>
+              {(newPoint.pointType === 'backsight' || newPoint.pointType === 'changepoint') && (
+                <>
+                  <Text style={styles.pointLabel}>Backsight (m)</Text>
+                  <TextInput
+                    style={styles.smallInput}
+                    value={newPoint.backsight}
+                    onChangeText={(text) => setNewPoint(prev => ({ ...prev, backsight: text }))}
+                    placeholder="1.500"
+                    keyboardType="decimal-pad"
+                  />
+                </>
+              )}
+              {(newPoint.pointType === 'intermediate' || newPoint.pointType === 'foresight') && (
+                <>
+                  <Text style={styles.pointLabel}>
+                    {newPoint.pointType === 'intermediate' ? 'Intermediate (m)' : 'Foresight (m)'}
+                  </Text>
+                  <TextInput
+                    style={styles.smallInput}
+                    value={newPoint.foresight}
+                    onChangeText={(text) => setNewPoint(prev => ({ ...prev, foresight: text }))}
+                    placeholder="2.100"
+                    keyboardType="decimal-pad"
+                  />
+                </>
+              )}
+              {newPoint.pointType === 'changepoint' && (
+                <>
+                  <Text style={styles.pointLabel}>Foresight (m)</Text>
+                  <TextInput
+                    style={styles.smallInput}
+                    value={newPoint.foresight}
+                    onChangeText={(text) => setNewPoint(prev => ({ ...prev, foresight: text }))}
+                    placeholder="2.100"
+                    keyboardType="decimal-pad"
+                  />
+                </>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.pointInputGrid}>
+            <View style={styles.pointInputHalf}>
+              {newPoint.pointType === 'changepoint' && (
+                <>
+                  <Text style={styles.pointLabel}>New Backsight (m)</Text>
+                  <TextInput
+                    style={styles.smallInput}
+                    value={newPoint.backsight}
+                    onChangeText={(text) => setNewPoint(prev => ({ ...prev, backsight: text }))}
+                    placeholder="1.500"
+                    keyboardType="decimal-pad"
+                  />
+                  <Text style={styles.fieldHint}>BS reading for new instrument setup</Text>
+                </>
+              )}
+              {newPoint.pointType !== 'changepoint' && (
+                <>
+                  <Text style={styles.pointLabel}>
+                    {newPoint.pointType === 'backsight' ? 'Foresight (Leave Empty)' : 'Backsight (Leave Empty)'}
+                  </Text>
+                  <TextInput
+                    style={[styles.smallInput, styles.disabledInput]}
+                    value=""
+                    editable={false}
+                    placeholder={newPoint.pointType === 'backsight' ? 'N/A for BS' : 'N/A for IS/FS'}
+                  />
+                  <Text style={styles.fieldHint}>
+                    {newPoint.pointType === 'backsight' ? 'Backsight only' : 'Using existing instrument height'}
+                  </Text>
+                </>
+              )}
+            </View>
+            <View style={styles.pointInputHalf}>
+              <Text style={styles.pointLabel}>Depth (m) - Optional</Text>
+              <TextInput
+                style={styles.smallInput}
+                value={newPoint.depth}
+                onChangeText={(text) => setNewPoint(prev => ({ ...prev, depth: text }))}
+                placeholder="0.0"
+                keyboardType="decimal-pad"
+              />
+              <Text style={styles.fieldHint}>Water depth only if cross-section in stream</Text>
+            </View>
+          </View>
+
+          <View style={styles.commentSection}>
+            <View style={styles.commentHeader}>
+              <Text style={styles.pointLabel}>Comment</Text>
+              <TouchableOpacity onPress={clearComment} style={styles.clearButton}>
+                <Text style={styles.clearButtonText}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.commentInput}
+              value={newPoint.comment}
+              onChangeText={(text) => setNewPoint(prev => ({ ...prev, comment: text }))}
+              placeholder="LB, RB, TOB, CP1, etc."
+              autoCapitalize="characters"
+            />
+          </View>
+
+          <View style={styles.quickComments}>
+            <Text style={styles.quickCommentsLabel}>Quick Comments:</Text>
+            <View style={styles.quickButtonsGrid}>
+              <View style={styles.quickButtonsRow}>
+                <TouchableOpacity 
+                  style={styles.quickButton} 
+                  onPress={() => setNewPoint(prev => ({ ...prev, comment: prev.comment ? `${prev.comment}, LB` : 'LB' }))}
+                >
+                  <Text style={styles.quickButtonText}>LB</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.quickButton} 
+                  onPress={() => setNewPoint(prev => ({ ...prev, comment: prev.comment ? `${prev.comment}, RB` : 'RB' }))}
+                >
+                  <Text style={styles.quickButtonText}>RB</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.quickButton} 
+                  onPress={() => setNewPoint(prev => ({ ...prev, comment: prev.comment ? `${prev.comment}, TOB` : 'TOB' }))}
+                >
+                  <Text style={styles.quickButtonText}>TOB</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.quickButton} 
+                  onPress={() => setNewPoint(prev => ({ ...prev, comment: prev.comment ? `${prev.comment}, WE` : 'WE' }))}
+                >
+                  <Text style={styles.quickButtonText}>WE</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.quickButtonsRow}>
+                <TouchableOpacity 
+                  style={styles.doubleButton} 
+                  onPress={() => addQuickComments('WE', 'LB')}
+                >
+                  <Text style={styles.quickButtonText}>WE + LB</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.doubleButton} 
+                  onPress={() => addQuickComments('WE', 'RB')}
+                >
+                  <Text style={styles.quickButtonText}>WE + RB</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.pointButtons}>
+            <TouchableOpacity style={styles.addButton} onPress={addSurveyPoint}>
+              <Text style={styles.addButtonText}>
+                {editingPointIndex !== null ? 'Update Point' : 'Add Point'}
+              </Text>
+            </TouchableOpacity>
+            {editingPointIndex !== null ? (
+              <TouchableOpacity style={styles.cancelButton} onPress={cancelEdit}>
+                <Text style={styles.cancelButtonText}>Cancel Edit</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.removeButton} onPress={removeLastPoint}>
+                <Text style={styles.removeButtonText}>Remove Last</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Cross-Section Visualization */}
+        {visualization && (
+          <View style={styles.visualizationContainer}>
+            <Text style={styles.label}>Cross-Section Profile:</Text>
+            <View style={styles.svgContainer}>
+              <View style={styles.svgBox}>
+                {/* This would be an SVG in a real implementation */}
+                <View style={styles.chartContainer}>
+                  <View style={styles.chartArea}>
+                    {/* Y-axis labels */}
+                    <View style={styles.yAxisLabels}>
+                      <Text style={styles.axisLabel}>{visualization.maxElevation.toFixed(1)}m</Text>
+                      <Text style={styles.axisLabel}>{((visualization.maxElevation + visualization.minElevation) / 2).toFixed(1)}m</Text>
+                      <Text style={styles.axisLabel}>{visualization.minElevation.toFixed(1)}m</Text>
+                    </View>
+                    
+                    {/* Chart area with points */}
+                    <View style={styles.plotArea}>
+                      {/* Grid lines */}
+                      <View style={styles.gridLine} />
+                      <View style={[styles.gridLine, { top: '33%' }]} />
+                      <View style={[styles.gridLine, { top: '66%' }]} />
+                      
+                      {/* Plot points */}
+                      {visualization.points.map((point, index) => (
+                        <View
+                          key={index}
+                          style={[
+                            styles.plotPoint,
+                            {
+                              left: `${(point.distance / visualization.maxDistance) * 100}%`,
+                              bottom: `${((point.elevation - visualization.minElevation) / (visualization.maxElevation - visualization.minElevation)) * 100}%`
+                            }
+                          ]}
+                        >
+                          <Text style={styles.pointLabel}>{index + 1}</Text>
+                        </View>
+                      ))}
+                      
+                      {/* Ground line representation */}
+                      <View style={styles.groundLineContainer}>
+                        {visualization.points.map((point, index) => {
+                          if (index === 0) return null;
+                          const prevPoint = visualization.points[index - 1];
+                          const x1 = (prevPoint.distance / visualization.maxDistance) * 100;
+                          const y1 = ((prevPoint.elevation - visualization.minElevation) / (visualization.maxElevation - visualization.minElevation)) * 100;
+                          const x2 = (point.distance / visualization.maxDistance) * 100;
+                          const y2 = ((point.elevation - visualization.minElevation) / (visualization.maxElevation - visualization.minElevation)) * 100;
+                          
+                          const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                          const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+                          
+                          return (
+                            <View
+                              key={index}
+                              style={[
+                                styles.groundSegment,
+                                {
+                                  left: `${x1}%`,
+                                  bottom: `${y1}%`,
+                                  width: `${length}%`,
+                                  transform: [{ rotate: `${angle}deg` }]
+                                }
+                              ]}
+                            />
+                          );
+                        })}
+                      </View>
+                      
+                      {/* Water indication */}
+                      {visualization.hasWater && (
+                        <View style={styles.waterIndicator}>
+                          <Text style={styles.waterText}>~ Water Level ~</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                  
+                  {/* X-axis labels */}
+                  <View style={styles.xAxisLabels}>
+                    <Text style={styles.axisLabel}>0m</Text>
+                    <Text style={styles.axisLabel}>{(visualization.maxDistance / 2).toFixed(1)}m</Text>
+                    <Text style={styles.axisLabel}>{visualization.maxDistance.toFixed(1)}m</Text>
+                  </View>
+                </View>
+              </View>
+              
+              <View style={styles.chartLegend}>
+                <Text style={styles.legendText}>
+                  📊 Cross-section from {visualization.minElevation.toFixed(1)}m to {visualization.maxElevation.toFixed(1)}m elevation
+                </Text>
+                <Text style={styles.legendText}>
+                  📏 Total width: {visualization.maxDistance.toFixed(1)}m | Points: {visualization.points.length}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        <View style={styles.pointsList}>
+          <Text style={styles.label}>Survey Points ({surveyData.points.length}) - Tap to Edit:</Text>
+          {surveyData.points.map((point, index) => (
+            <TouchableOpacity 
+              key={index} 
+              style={[
+                styles.pointItem, 
+                point.pointType === 'changepoint' && styles.changePointItem,
+                editingPointIndex === index && styles.editingPointItem
+              ]}
+              onPress={() => editPoint(index)}
+            >
+              <Text style={styles.pointText}>
+                {index + 1}. {point.distance}m @ {formatElevation(point.elevation)}m
+              </Text>
+              <Text style={styles.pointSightings}>
+                BS: {formatElevation(point.backsight) || 'N/A'} | FS: {formatElevation(point.foresight) || 'N/A'} | Depth: {point.depth}m
+              </Text>
+              {point.comment && (
+                <Text style={styles.pointComment}>   Comment: {point.comment}</Text>
+              )}
+              {point.pointType === 'changepoint' && (
+                <Text style={styles.changePointText}>   🔄 CHANGE POINT</Text>
+              )}
+              {point.rise !== null && point.rise > 0 && (
+                <Text style={styles.pointRiseFall}>   Rise: {point.rise.toFixed(3)}m ↗</Text>
+              )}
+              {point.fall !== null && point.fall > 0 && (
+                <Text style={styles.pointRiseFall}>   Fall: {point.fall.toFixed(3)}m ↘</Text>
+              )}
+              {point.difference === 0 && index > 0 && (
+                <Text style={styles.pointRiseFall}>   Level: 0.000m →</Text>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Change Points Summary */}
+        {surveyData.changePoints.length > 0 && (
+          <View style={styles.changePointsSummary}>
+            <Text style={styles.label}>Change Points Summary:</Text>
+            {surveyData.changePoints.map((cp, index) => (
+              <View key={index} style={styles.changePointSummaryItem}>
+                <Text style={styles.changePointSummaryText}>
+                  CP{index + 1}: {cp.distance}m @ {formatElevation(cp.elevation)}m
+                </Text>
+                <Text style={styles.changePointSummaryDetails}>
+                  IH: {formatElevation(cp.oldInstrumentHeight)}m → {formatElevation(cp.newInstrumentHeight)}m
+                </Text>
+                <Text style={styles.changePointSummaryDetails}>
+                  BS: {formatElevation(cp.backsight)}m | FS: {formatElevation(cp.foresight)}m
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+        
+        <View style={styles.formSection}>
+          <Text style={styles.label}>Survey Notes:</Text>
+          <TextInput
+            style={styles.textArea}
+            value={surveyData.notes}
+            onChangeText={(text) => setSurveyData(prev => ({ ...prev, notes: text }))}
+            placeholder="Flow conditions, weather, equipment used..."
+            multiline
+            numberOfLines={3}
+          />
+        </View>
+        
+        <View style={styles.locationBox}>
+          <Text style={styles.locationLabel}>GPS Coordinates:</Text>
+          <Text style={[
+            styles.locationInfo, 
+            !location && styles.locationError
+          ]}>
+            {formatLocation()}
+          </Text>
+          {!location && (
+            <Text style={styles.locationWarning}>
+              ⚠️ GPS location required for survey
+            </Text>
+          )}
+        </View>
+        
+        <View style={styles.formButtons}>
+          <View style={styles.buttonHalf}>
+            <Button 
+              title="Save Survey" 
+              onPress={handleSave}
+              disabled={!location || !surveyData.id.trim() || surveyData.points.length < 2}
+            />
+          </View>
+          <View style={styles.buttonHalf}>
+            <Button 
+              title="Cancel" 
+              onPress={handleClose} 
+              color="red" 
+            />
+          </View>
+        </View>
+
+        <View style={styles.formSection}>
+          <Text style={styles.helpText}>
+            💡 Tip: Set instrument height first, then add points with either backsight OR foresight (both for change points).
+          </Text>
+        </View>
+      </ScrollView>
+    </Modal>
+  );
+};
+
+export default SurveyForm;

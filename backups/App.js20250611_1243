@@ -1,0 +1,634 @@
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, Button, Alert, Modal, TextInput, ScrollView, TouchableOpacity } from 'react-native';
+import * as Location from 'expo-location';
+
+export default function App() {
+  const [location, setLocation] = useState(null);
+  const [samples, setSamples] = useState([]);
+  const [surveys, setSurveys] = useState([]);
+  const [showSampleForm, setShowSampleForm] = useState(false);
+  const [showSurveyForm, setShowSurveyForm] = useState(false);
+  const [currentSample, setCurrentSample] = useState({ id: '', notes: '' });
+  const [currentSurvey, setCurrentSurvey] = useState({
+    id: '',
+    notes: '',
+    points: [],
+    width: 0,
+    maxDepth: 0,
+    avgDepth: 0
+  });
+  const [newPoint, setNewPoint] = useState({ distance: '', elevation: '', depth: '' });
+
+  useEffect(() => {
+    getLocationPermission();
+  }, []);
+
+  const getLocationPermission = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Location access is required');
+      return;
+    }
+    refreshLocation();
+  };
+
+  const refreshLocation = async () => {
+    try {
+      let newLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      setLocation(newLocation);
+    } catch (error) {
+      Alert.alert('Error', 'Could not get location');
+    }
+  };
+
+  const startSampleCollection = () => {
+    setCurrentSample({ id: '', notes: '' });
+    setShowSampleForm(true);
+  };
+
+  const startSurvey = () => {
+    setCurrentSurvey({
+      id: '',
+      notes: '',
+      points: [],
+      width: 0,
+      maxDepth: 0,
+      avgDepth: 0
+    });
+    setNewPoint({ distance: '', elevation: '', depth: '' });
+    setShowSurveyForm(true);
+  };
+
+  const addSurveyPoint = () => {
+    const distance = parseFloat(newPoint.distance);
+    const elevation = parseFloat(newPoint.elevation);
+    const depth = parseFloat(newPoint.depth || '0');
+
+    if (isNaN(distance) || isNaN(elevation)) {
+      Alert.alert('Error', 'Distance and elevation are required');
+      return;
+    }
+
+    const point = {
+      distance: distance,
+      elevation: elevation,
+      depth: depth,
+      waterLevel: elevation - depth
+    };
+
+    const updatedPoints = [...currentSurvey.points, point];
+    const maxDepth = Math.max(...updatedPoints.map(p => p.depth));
+    const avgDepth = updatedPoints.reduce((sum, p) => sum + p.depth, 0) / updatedPoints.length;
+    const width = updatedPoints.length > 0 ? Math.max(...updatedPoints.map(p => p.distance)) : 0;
+
+    setCurrentSurvey({
+      ...currentSurvey,
+      points: updatedPoints,
+      maxDepth: maxDepth,
+      avgDepth: avgDepth,
+      width: width
+    });
+
+    setNewPoint({ distance: '', elevation: '', depth: '' });
+  };
+
+  const removeLastPoint = () => {
+    if (currentSurvey.points.length === 0) return;
+    
+    const updatedPoints = currentSurvey.points.slice(0, -1);
+    const maxDepth = updatedPoints.length > 0 ? Math.max(...updatedPoints.map(p => p.depth)) : 0;
+    const avgDepth = updatedPoints.length > 0 ? updatedPoints.reduce((sum, p) => sum + p.depth, 0) / updatedPoints.length : 0;
+    const width = updatedPoints.length > 0 ? Math.max(...updatedPoints.map(p => p.distance)) : 0;
+
+    setCurrentSurvey({
+      ...currentSurvey,
+      points: updatedPoints,
+      maxDepth: maxDepth,
+      avgDepth: avgDepth,
+      width: width
+    });
+  };
+
+  const saveSample = () => {
+    if (!location) {
+      Alert.alert('Error', 'GPS location required');
+      return;
+    }
+
+    if (!currentSample.id.trim()) {
+      Alert.alert('Error', 'Sample ID required');
+      return;
+    }
+
+    const newSample = {
+      id: currentSample.id.trim(),
+      notes: currentSample.notes.trim(),
+      timestamp: new Date().toLocaleString(),
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      altitude: location.coords.altitude,
+      accuracy: location.coords.accuracy,
+    };
+
+    setSamples([...samples, newSample]);
+    setShowSampleForm(false);
+    setCurrentSample({ id: '', notes: '' });
+    Alert.alert('Success', `Sample ${newSample.id} saved!`);
+  };
+
+  const saveSurvey = () => {
+    if (!location) {
+      Alert.alert('Error', 'GPS location required');
+      return;
+    }
+
+    if (!currentSurvey.id.trim()) {
+      Alert.alert('Error', 'Survey ID required');
+      return;
+    }
+
+    if (currentSurvey.points.length < 2) {
+      Alert.alert('Error', 'At least 2 survey points required');
+      return;
+    }
+
+    const newSurvey = {
+      ...currentSurvey,
+      id: currentSurvey.id.trim(),
+      notes: currentSurvey.notes.trim(),
+      timestamp: new Date().toLocaleString(),
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      altitude: location.coords.altitude,
+      accuracy: location.coords.accuracy,
+    };
+
+    setSurveys([...surveys, newSurvey]);
+    setShowSurveyForm(false);
+    Alert.alert('Success', `Survey ${newSurvey.id} saved with ${newSurvey.points.length} points!`);
+  };
+
+  const exportData = () => {
+    if (samples.length === 0 && surveys.length === 0) {
+      Alert.alert('No Data', 'No samples or surveys to export');
+      return;
+    }
+
+    let exportText = '=== SAMPLES ===\n';
+    exportText += 'Sample_ID,Timestamp,Latitude,Longitude,Altitude,Accuracy,Notes\n';
+    samples.forEach(sample => {
+      exportText += `${sample.id},${sample.timestamp},${sample.latitude},${sample.longitude},${sample.altitude || ''},${sample.accuracy || ''},${sample.notes}\n`;
+    });
+
+    exportText += '\n=== CROSS-SECTION SURVEYS ===\n';
+    surveys.forEach(survey => {
+      exportText += `\nSurvey: ${survey.id}\n`;
+      exportText += `Location: ${survey.latitude.toFixed(6)}, ${survey.longitude.toFixed(6)}\n`;
+      exportText += `Timestamp: ${survey.timestamp}\n`;
+      exportText += `Width: ${survey.width.toFixed(2)}m, Max Depth: ${survey.maxDepth.toFixed(2)}m, Avg Depth: ${survey.avgDepth.toFixed(2)}m\n`;
+      exportText += `Notes: ${survey.notes}\n`;
+      exportText += 'Distance,Elevation,Depth,Water_Level\n';
+      survey.points.forEach(point => {
+        exportText += `${point.distance},${point.elevation},${point.depth},${point.waterLevel.toFixed(2)}\n`;
+      });
+    });
+
+    Alert.alert('Export Data', exportText.substring(0, 2000) + (exportText.length > 2000 ? '...[truncated]' : ''));
+  };
+
+  const formatLocation = () => {
+    if (!location) return 'Getting GPS...';
+    const lat = location.coords.latitude.toFixed(6);
+    const lon = location.coords.longitude.toFixed(6);
+    const alt = location.coords.altitude ? location.coords.altitude.toFixed(1) : 'N/A';
+    const acc = location.coords.accuracy ? location.coords.accuracy.toFixed(1) : 'N/A';
+    
+    return `Lat: ${lat}\nLon: ${lon}\nAlt: ${alt}m\nAccuracy: ±${acc}m`;
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Hydrographer's Companion</Text>
+      
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>GPS Location</Text>
+        <Text style={styles.locationText}>{formatLocation()}</Text>
+        <Button title="Refresh GPS" onPress={refreshLocation} />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Field Operations</Text>
+        <View style={styles.buttonGrid}>
+          <View style={styles.buttonQuarter}>
+            <Button title="New Sample" onPress={startSampleCollection} />
+          </View>
+          <View style={styles.buttonQuarter}>
+            <Button title="Cross-Section" onPress={startSurvey} />
+          </View>
+          <View style={styles.buttonQuarter}>
+            <Button title="Export Data" onPress={exportData} disabled={samples.length === 0 && surveys.length === 0} />
+          </View>
+          <View style={styles.buttonQuarter}>
+            <Button title="Refresh GPS" onPress={refreshLocation} />
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Recent Samples ({samples.length})</Text>
+        {samples.slice(-3).map((sample, index) => (
+          <View key={index} style={styles.dataItem}>
+            <Text style={styles.dataId}>{sample.id}</Text>
+            <Text style={styles.dataDetails}>{sample.timestamp}</Text>
+            <Text style={styles.dataDetails}>
+              {sample.latitude.toFixed(6)}, {sample.longitude.toFixed(6)}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Recent Surveys ({surveys.length})</Text>
+        {surveys.slice(-3).map((survey, index) => (
+          <View key={index} style={styles.dataItem}>
+            <Text style={styles.dataId}>{survey.id}</Text>
+            <Text style={styles.dataDetails}>{survey.timestamp}</Text>
+            <Text style={styles.dataDetails}>
+              {survey.points.length} points, Width: {survey.width.toFixed(1)}m, Max Depth: {survey.maxDepth.toFixed(1)}m
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Sample Form Modal */}
+      <Modal visible={showSampleForm} animationType="slide">
+        <ScrollView style={styles.modalContainer}>
+          <Text style={styles.formTitle}>New Sample Collection</Text>
+          
+          <Text style={styles.label}>Sample ID:</Text>
+          <TextInput
+            style={styles.input}
+            value={currentSample.id}
+            onChangeText={(text) => setCurrentSample({...currentSample, id: text})}
+            placeholder="Enter sample bottle ID"
+            autoCapitalize="characters"
+          />
+          
+          <Text style={styles.label}>Field Notes:</Text>
+          <TextInput
+            style={styles.textArea}
+            value={currentSample.notes}
+            onChangeText={(text) => setCurrentSample({...currentSample, notes: text})}
+            placeholder="Weather, conditions, observations..."
+            multiline
+            numberOfLines={4}
+          />
+          
+          <View style={styles.locationBox}>
+            <Text style={styles.locationLabel}>GPS Coordinates:</Text>
+            <Text style={styles.locationInfo}>{formatLocation()}</Text>
+          </View>
+          
+          <View style={styles.formButtons}>
+            <View style={styles.buttonHalf}>
+              <Button title="Save Sample" onPress={saveSample} />
+            </View>
+            <View style={styles.buttonHalf}>
+              <Button title="Cancel" onPress={() => setShowSampleForm(false)} color="red" />
+            </View>
+          </View>
+        </ScrollView>
+      </Modal>
+
+      {/* Survey Form Modal */}
+      <Modal visible={showSurveyForm} animationType="slide">
+        <ScrollView style={styles.modalContainer}>
+          <Text style={styles.formTitle}>Cross-Section Survey</Text>
+          
+          <Text style={styles.label}>Survey ID:</Text>
+          <TextInput
+            style={styles.input}
+            value={currentSurvey.id}
+            onChangeText={(text) => setCurrentSurvey({...currentSurvey, id: text})}
+            placeholder="e.g., XS-001, Station-A-CS1"
+            autoCapitalize="characters"
+          />
+
+          <View style={styles.surveyStats}>
+            <Text style={styles.statsTitle}>Survey Statistics</Text>
+            <Text style={styles.statsText}>Points: {currentSurvey.points.length}</Text>
+            <Text style={styles.statsText}>Width: {currentSurvey.width.toFixed(2)}m</Text>
+            <Text style={styles.statsText}>Max Depth: {currentSurvey.maxDepth.toFixed(2)}m</Text>
+            <Text style={styles.statsText}>Avg Depth: {currentSurvey.avgDepth.toFixed(2)}m</Text>
+          </View>
+
+          <View style={styles.pointEntry}>
+            <Text style={styles.label}>Add Survey Point:</Text>
+            <View style={styles.pointInputRow}>
+              <View style={styles.pointInput}>
+                <Text style={styles.pointLabel}>Distance (m)</Text>
+                <TextInput
+                  style={styles.smallInput}
+                  value={newPoint.distance}
+                  onChangeText={(text) => setNewPoint({...newPoint, distance: text})}
+                  placeholder="0.0"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={styles.pointInput}>
+                <Text style={styles.pointLabel}>Elevation (m)</Text>
+                <TextInput
+                  style={styles.smallInput}
+                  value={newPoint.elevation}
+                  onChangeText={(text) => setNewPoint({...newPoint, elevation: text})}
+                  placeholder="100.0"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={styles.pointInput}>
+                <Text style={styles.pointLabel}>Depth (m)</Text>
+                <TextInput
+                  style={styles.smallInput}
+                  value={newPoint.depth}
+                  onChangeText={(text) => setNewPoint({...newPoint, depth: text})}
+                  placeholder="0.0"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+            </View>
+            <View style={styles.pointButtons}>
+              <TouchableOpacity style={styles.addButton} onPress={addSurveyPoint}>
+                <Text style={styles.addButtonText}>Add Point</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.removeButton} onPress={removeLastPoint}>
+                <Text style={styles.removeButtonText}>Remove Last</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.pointsList}>
+            <Text style={styles.label}>Survey Points ({currentSurvey.points.length}):</Text>
+            {currentSurvey.points.map((point, index) => (
+              <View key={index} style={styles.pointItem}>
+                <Text style={styles.pointText}>
+                  {index + 1}. {point.distance}m @ {point.elevation}m (depth: {point.depth}m)
+                </Text>
+              </View>
+            ))}
+          </View>
+          
+          <Text style={styles.label}>Survey Notes:</Text>
+          <TextInput
+            style={styles.textArea}
+            value={currentSurvey.notes}
+            onChangeText={(text) => setCurrentSurvey({...currentSurvey, notes: text})}
+            placeholder="Flow conditions, weather, equipment used..."
+            multiline
+            numberOfLines={3}
+          />
+          
+          <View style={styles.locationBox}>
+            <Text style={styles.locationLabel}>GPS Coordinates:</Text>
+            <Text style={styles.locationInfo}>{formatLocation()}</Text>
+          </View>
+          
+          <View style={styles.formButtons}>
+            <View style={styles.buttonHalf}>
+              <Button title="Save Survey" onPress={saveSurvey} />
+            </View>
+            <View style={styles.buttonHalf}>
+              <Button title="Cancel" onPress={() => setShowSurveyForm(false)} color="red" />
+            </View>
+          </View>
+        </ScrollView>
+      </Modal>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingTop: 50,
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 30,
+    color: '#2c3e50',
+  },
+  section: {
+    marginBottom: 20,
+    padding: 15,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#34495e',
+  },
+  locationText: {
+    fontSize: 14,
+    marginBottom: 15,
+    fontFamily: 'monospace',
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 5,
+  },
+  buttonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  buttonQuarter: {
+    width: '48%',
+    marginBottom: 10,
+  },
+  buttonHalf: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  dataItem: {
+    backgroundColor: '#fff',
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  dataId: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+  },
+  dataDetails: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginTop: 2,
+  },
+  modalContainer: {
+    flex: 1,
+    padding: 20,
+    paddingTop: 60,
+    backgroundColor: '#fff',
+  },
+  formTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 30,
+    color: '#2c3e50',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 15,
+    color: '#495057',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ced4da',
+    padding: 12,
+    borderRadius: 5,
+    fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: '#ced4da',
+    padding: 12,
+    borderRadius: 5,
+    fontSize: 16,
+    height: 80,
+    textAlignVertical: 'top',
+    backgroundColor: '#fff',
+  },
+  locationBox: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 5,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  locationLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 5,
+    color: '#495057',
+  },
+  locationInfo: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+    color: '#6c757d',
+  },
+  formButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 30,
+    marginBottom: 20,
+  },
+  surveyStats: {
+    backgroundColor: '#e3f2fd',
+    padding: 15,
+    borderRadius: 5,
+    marginBottom: 15,
+  },
+  statsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#1976d2',
+  },
+  statsText: {
+    fontSize: 14,
+    color: '#1976d2',
+    marginBottom: 2,
+  },
+  pointEntry: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 5,
+    marginBottom: 15,
+  },
+  pointInputRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  pointInput: {
+    flex: 1,
+    marginHorizontal: 2,
+  },
+  pointLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 5,
+    color: '#495057',
+  },
+  smallInput: {
+    borderWidth: 1,
+    borderColor: '#ced4da',
+    padding: 8,
+    borderRadius: 3,
+    fontSize: 14,
+    backgroundColor: '#fff',
+    textAlign: 'center',
+  },
+  pointButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  addButton: {
+    backgroundColor: '#28a745',
+    padding: 10,
+    borderRadius: 5,
+    flex: 1,
+    marginRight: 5,
+  },
+  addButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  removeButton: {
+    backgroundColor: '#dc3545',
+    padding: 10,
+    borderRadius: 5,
+    flex: 1,
+    marginLeft: 5,
+  },
+  removeButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  pointsList: {
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  pointItem: {
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8f9fa',
+  },
+  pointText: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+    color: '#495057',
+  },
+});

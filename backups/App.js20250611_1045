@@ -1,0 +1,139 @@
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, Button, Alert } from 'react-native';
+import * as Location from 'expo-location';
+
+export default function App() {
+  const [location, setLocation] = useState(null);
+  const [samples, setSamples] = useState([]);
+
+  useEffect(() => {
+    getLocationPermission();
+  }, []);
+
+  const getLocationPermission = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Location access is required');
+      return;
+    }
+    refreshLocation();
+  };
+
+  const refreshLocation = async () => {
+    try {
+      let newLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      setLocation(newLocation);
+    } catch (error) {
+      Alert.alert('Error', 'Could not get location');
+    }
+  };
+
+  const saveSample = () => {
+    if (!location) {
+      Alert.alert('Error', 'GPS location required');
+      return;
+    }
+
+    const newSample = {
+      id: `SAMPLE_${Date.now()}`,
+      timestamp: new Date().toLocaleString(),
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      altitude: location.coords.altitude,
+      accuracy: location.coords.accuracy,
+    };
+
+    setSamples([...samples, newSample]);
+    Alert.alert('Success', `Sample ${newSample.id} saved!`);
+  };
+
+  const formatLocation = () => {
+    if (!location) return 'Getting GPS...';
+    const lat = location.coords.latitude.toFixed(6);
+    const lon = location.coords.longitude.toFixed(6);
+    const alt = location.coords.altitude ? location.coords.altitude.toFixed(1) : 'N/A';
+    const acc = location.coords.accuracy ? location.coords.accuracy.toFixed(1) : 'N/A';
+    
+    return `Lat: ${lat}\nLon: ${lon}\nAlt: ${alt}m\nAccuracy: ±${acc}m`;
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Hydrographer's Companion</Text>
+      
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>GPS Location</Text>
+        <Text style={styles.locationText}>{formatLocation()}</Text>
+        <Button title="Refresh GPS" onPress={refreshLocation} />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Sample Collection</Text>
+        <Button title="Save Sample" onPress={saveSample} />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Samples ({samples.length})</Text>
+        {samples.slice(-3).map((sample, index) => (
+          <View key={index} style={styles.sampleItem}>
+            <Text style={styles.sampleId}>{sample.id}</Text>
+            <Text style={styles.sampleDetails}>
+              {sample.latitude.toFixed(6)}, {sample.longitude.toFixed(6)}
+            </Text>
+            <Text style={styles.sampleDetails}>{sample.timestamp}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingTop: 50,
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  section: {
+    marginBottom: 20,
+    padding: 15,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  locationText: {
+    fontSize: 14,
+    marginBottom: 15,
+    fontFamily: 'monospace',
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 5,
+  },
+  sampleItem: {
+    backgroundColor: '#fff',
+    padding: 10,
+    marginBottom: 5,
+    borderRadius: 5,
+  },
+  sampleId: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  sampleDetails: {
+    fontSize: 12,
+    color: '#666',
+  },
+});
