@@ -1,0 +1,27 @@
+<NotepadPlus>
+    <Project name="Hydcom">
+        <File name="App.js" />
+        <File name="hydrographer_app_spec.md" />
+        <File name="index.js" />
+        <File name="project_structure.md" />
+        <Folder name="components">
+            <File name="src\components\BarcodeScanner.js" />
+            <File name="src\components\DataExport.js" />
+            <File name="src\components\GPSStatus.js" />
+            <File name="src\components\SampleForm.js" />
+            <File name="src\components\SurveyForm.js" />
+        </Folder>
+        <Folder name="hooks">
+            <File name="src\hooks\useLocation.js" />
+            <File name="src\hooks\useSamples.js" />
+            <File name="src\hooks\useSurveys.js" />
+        </Folder>
+        <Folder name="styles">
+            <File name="src\styles\AppStyles.js" />
+        </Folder>
+        <Folder name="utils">
+            <File name="src\utils\exportUtils.js" />
+            <File name="src\utils\survey_calculations.js" />
+        </Folder>
+    </Project>
+</NotepadPlus>
