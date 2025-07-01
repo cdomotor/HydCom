@@ -26,6 +26,9 @@ jobs:
       - name: Install expo-updates (if needed)
         run: npx expo install expo-updates
 
+      - name: Prebuild
+        run: npx expo prebuild --non-interactive
+
       - name: Publish to Expo
         run: npx eas update --branch preview --non-interactive
         env:
