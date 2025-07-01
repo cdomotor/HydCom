@@ -27,7 +27,7 @@ jobs:
         run: npx expo install expo-updates
 
       - name: Prebuild
-        run: npx expo prebuild --non-interactive
+        run: CI=1 npx expo prebuild
 
       - name: Publish to Expo
         run: npx eas update --branch preview --non-interactive
