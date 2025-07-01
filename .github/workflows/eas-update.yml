@@ -30,6 +30,6 @@ jobs:
         run: CI=1 npx expo prebuild
 
       - name: Publish to Expo
-        run: npx eas update --branch preview --non-interactive
+        run: npx eas update --auto --branch preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
