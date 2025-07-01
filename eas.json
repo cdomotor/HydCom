@@ -2,7 +2,7 @@
   "cli": {
     "version": ">=3.0.0"
   },
-  "update": {
+  "build": {
     "preview": {
       "channel": "preview"
     }
