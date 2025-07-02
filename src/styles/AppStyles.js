@@ -912,11 +912,34 @@ export const styles = StyleSheet.create({
 
   // Survey Chart Container
   chartContainer: {
-  backgroundColor: '#fff',
-  borderRadius: 10,
-  padding: 10,
-  marginTop: 15,
-  elevation: 2,
-}
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 15,
+    elevation: 2,
+  },
+
+  // GPS mini map & coordinates
+  locationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  locationText: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#fff',
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  locationCoordinates: {
+    fontSize: 13,
+    fontFamily: 'monospace',
+  },
+  accuracyStatus: {
+    fontSize: 12,
+    marginTop: 5,
+  },
 
 });

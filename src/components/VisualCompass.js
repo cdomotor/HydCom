@@ -26,21 +26,43 @@ const VisualCompass = ({ location, size = 120 }) => {
             }
           ]}
         >
-          {/* Degree Markings */}
-          {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((degree) => (
-            <View
-              key={degree}
-              style={[
-                compassStyles.degreeMark,
-                {
-                  transform: [
-                    { rotate: `${degree}deg` },
-                    { translateY: -size/2 + 15 }
-                  ]
-                }
-              ]}
-            />
-          ))}
+          {/* Degree Markings and Cardinal Labels */}
+          {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((degree) => {
+            const cardinal = {0: 'N', 90: 'E', 180: 'S', 270: 'W'}[degree];
+            if (cardinal) {
+              return (
+                <Text
+                  key={degree}
+                  style={[
+                    compassStyles.cardinalLabel,
+                    {
+                      transform: [
+                        { rotate: `${degree}deg` },
+                        { translateY: -size/2 + 15 },
+                        { rotate: `${-degree}deg` }
+                      ]
+                    }
+                  ]}
+                >
+                  {cardinal}
+                </Text>
+              );
+            }
+            return (
+              <View
+                key={degree}
+                style={[
+                  compassStyles.degreeMark,
+                  {
+                    transform: [
+                      { rotate: `${degree}deg` },
+                      { translateY: -size/2 + 15 }
+                    ]
+                  }
+                ]}
+              />
+            );
+          })}
         </View>
 
         {/* Center Dot */}
