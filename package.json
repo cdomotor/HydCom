@@ -20,6 +20,7 @@
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
     "react-native": "0.79.3",
+    "react-native-maps": "^1.24.3",
     "react-native-svg": "15.11.2",
     "victory-native": "^41.17.4"
   },
