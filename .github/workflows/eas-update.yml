@@ -26,6 +26,9 @@ jobs:
       - name: Prebuild
         run: CI=1 npx expo prebuild
 
+      - name: Stamp app name with timestamp
+        run: node scripts/stamp-app-name.js
+
       - name: Publish to Expo
         run: npx eas update --auto --branch preview --non-interactive
         env:
