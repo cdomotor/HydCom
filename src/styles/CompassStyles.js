@@ -6,10 +6,10 @@ export const compassStyles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 20,
   },
-  compassTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
+  compassRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
   },
   compassRose: {
     position: 'relative',
@@ -25,38 +25,12 @@ export const compassStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  compassMarker: {
-    position: 'absolute',
-    zIndex: 2,
-  },
-  compassCardinal: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   compassCenter: {
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: 'black',
     zIndex: 3,
-  },
-  compassNeedle: {
-    position: 'absolute',
-    width: 4,
-    height: '100%',
-    zIndex: 3,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  needleNorth: {
-    width: 4,
-    height: 40,
-    backgroundColor: 'red',
-  },
-  needleSouth: {
-    width: 4,
-    height: 40,
-    backgroundColor: 'white',
   },
   degreeMark: {
     position: 'absolute',

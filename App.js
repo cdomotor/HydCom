@@ -73,15 +73,17 @@ export default function App() {
             />
           </View>
           <View style={styles.buttonQuarter}>
-            <DataExport samples={samples} surveys={surveys} />
-          </View>
-          <View style={styles.buttonQuarter}>
-            <Button 
-              title="Refresh GPS" 
-              onPress={refreshLocation} 
+            <Button
+              title="Refresh GPS"
+              onPress={refreshLocation}
             />
           </View>
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Export & Backup</Text>
+        <DataExport samples={samples} surveys={surveys} />
       </View>
 
       {/* Recent Data Summary */}

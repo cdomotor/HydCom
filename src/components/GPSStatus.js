@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Button } from 'react-native';
 import { styles } from '../styles/AppStyles';
+import { compassStyles } from '../styles/CompassStyles';
 import { getMagneticDeclination } from '../utils/gpsUtils';
 import VisualCompass from './VisualCompass';
 
@@ -78,55 +79,67 @@ const GPSStatus = ({ location, onRefresh, watchingPosition, toggleWatching }) =>
     return '🧭';
   };
 
+  const compassLines = formatCompass().split('\n');
+
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>GPS & Location</Text>
-      
-      {/* GPS Coordinates */}
-      <View style={[styles.locationText, { borderLeftColor: getAccuracyColor(), borderLeftWidth: 4 }]}>
-        <Text style={styles.locationCoordinates}>{formatLocation()}</Text>
-        {location && (
-          <Text style={[styles.accuracyStatus, { color: getAccuracyColor() }]}>
-            Status: {getAccuracyStatus().toUpperCase()}
-            {watchingPosition && ' • LIVE'}
-          </Text>
-        )}
+    <View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>GPS & Location</Text>
+
+        {/* GPS Coordinates */}
+        <View
+          style={[
+            styles.locationText,
+            { borderLeftColor: getAccuracyColor(), borderLeftWidth: 4 }
+          ]}
+        >
+          <Text style={styles.locationCoordinates}>{formatLocation()}</Text>
+          {location && (
+            <Text style={[styles.accuracyStatus, { color: getAccuracyColor() }]}>
+              Status: {getAccuracyStatus().toUpperCase()}
+              {watchingPosition && ' • LIVE'}
+            </Text>
+          )}
+        </View>
+
+        {/* Control Buttons */}
+        <View style={styles.buttonGrid}>
+          <View style={styles.buttonHalf}>
+            <Button title="Refresh GPS" onPress={onRefresh} />
+          </View>
+          <View style={styles.buttonHalf}>
+            <Button
+              title={watchingPosition ? 'Stop Live' : 'Start Live'}
+              onPress={toggleWatching}
+              color={watchingPosition ? '#dc3545' : '#28a745'}
+            />
+          </View>
+        </View>
       </View>
 
-      {/* Visual Compass */}
-      <VisualCompass location={location} size={100} />
-
-      {/* Digital Compass Display */}
-      <View style={[styles.compassContainer]}>
-        <View style={styles.compassHeader}>
-          <Text style={styles.compassTitle}>
-            {getCompassIndicator()} Digital Compass
-          </Text>
-        </View>
-        <Text style={styles.compassReadings}>{formatCompass()}</Text>
-        {location && location.coords.heading !== null && location.coords.heading !== undefined && (
-          <Text style={styles.compassNote}>
-            💡 Live tracking: {watchingPosition ? 'ON' : 'OFF'}
-          </Text>
-        )}
-        {(!location || location.coords.heading === null || location.coords.heading === undefined) && (
-          <Text style={styles.compassWarning}>
-            ⚠️ Compass requires device movement
-          </Text>
-        )}
-      </View>
-
-      {/* Control Buttons */}
-      <View style={styles.buttonGrid}>
-        <View style={styles.buttonHalf}>
-          <Button title="Refresh GPS" onPress={onRefresh} />
-        </View>
-        <View style={styles.buttonHalf}>
-          <Button 
-            title={watchingPosition ? "Stop Live" : "Start Live"} 
-            onPress={toggleWatching}
-            color={watchingPosition ? "#dc3545" : "#28a745"}
-          />
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Compass</Text>
+        <View style={compassStyles.compassRow}>
+          <VisualCompass location={location} size={100} />
+          <View style={compassStyles.compassReadout}>
+            <Text style={compassStyles.compassHeading}>{compassLines[0]}</Text>
+            <Text style={compassStyles.compassDirection}>{compassLines[1]}</Text>
+            <Text style={compassStyles.compassTrue}>{compassLines[2]}</Text>
+            {location &&
+              location.coords.heading !== null &&
+              location.coords.heading !== undefined && (
+                <Text style={compassStyles.compassDirection}>
+                  💡 Live tracking: {watchingPosition ? 'ON' : 'OFF'}
+                </Text>
+              )}
+            {(!location ||
+              location.coords.heading === null ||
+              location.coords.heading === undefined) && (
+              <Text style={compassStyles.compassWarning}>
+                ⚠️ Compass requires device movement
+              </Text>
+            )}
+          </View>
         </View>
       </View>
     </View>
