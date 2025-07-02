@@ -7,6 +7,8 @@ import GPSStatus from './src/components/GPSStatus';
 import SampleForm from './src/components/SampleForm';
 import SurveyForm from './src/components/SurveyForm';
 import DataExport from './src/components/DataExport';
+import SunTrackPlot from './src/components/SunTrackPlot';
+import CameraCapture from './src/components/CameraCapture';
 
 // Hooks
 import useLocation from './src/hooks/useLocation';
@@ -20,13 +22,13 @@ export default function App() {
   // UI State
   const [showSampleForm, setShowSampleForm] = useState(false);
   const [showSurveyForm, setShowSurveyForm] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
 
   // Custom Hooks
-  const { 
-    location, 
-    refreshLocation, 
-    watchingPosition, 
-    toggleWatching 
+  const {
+    location,
+    watchingPosition,
+    toggleWatching
   } = useLocation();
   const { samples, addSample } = useSamples();
   const { surveys, addSurvey } = useSurveys();
@@ -49,12 +51,14 @@ export default function App() {
       <Text style={styles.title}>Hydrographer's Companion</Text>
       
       {/* GPS Status Component with Live Compass */}
-      <GPSStatus 
-        location={location} 
-        onRefresh={refreshLocation}
+      <GPSStatus
+        location={location}
         watchingPosition={watchingPosition}
         toggleWatching={toggleWatching}
       />
+
+      {/* Sun Track Plot */}
+      <SunTrackPlot />
 
       {/* Operations Panel */}
       <View style={styles.section}>
@@ -70,6 +74,12 @@ export default function App() {
             <Button
               title="New Sample"
               onPress={() => setShowSampleForm(true)}
+            />
+          </View>
+          <View style={styles.buttonQuarter}>
+            <Button
+              title="Camera"
+              onPress={() => setShowCamera(true)}
             />
           </View>
         </View>
@@ -130,6 +140,11 @@ export default function App() {
         onClose={() => setShowSurveyForm(false)}
         onSave={handleSurveySave}
         location={location}
+      />
+
+      <CameraCapture
+        visible={showCamera}
+        onClose={() => setShowCamera(false)}
       />
     </ScrollView>
   );

@@ -8,27 +8,39 @@ const CrossSectionChart = ({ points = [] }) => {
     return <Text>Need at least 2 points</Text>;
   }
 
-  // Filter out any invalid or NaN values which can crash Victory
-  const valid = points.filter(
-    (p) =>
-      typeof p.distance === 'number' &&
-      !isNaN(p.distance) &&
-      typeof p.elevation === 'number' &&
-      !isNaN(p.elevation) &&
-      typeof p.waterLevel === 'number' &&
-      !isNaN(p.waterLevel)
-  );
+  let valid = [];
+  try {
+    // Filter out invalid or NaN values which can crash Victory
+    valid = points.filter(
+      (p) =>
+        typeof p.distance === 'number' &&
+        !isNaN(p.distance) &&
+        typeof p.elevation === 'number' &&
+        !isNaN(p.elevation) &&
+        typeof p.waterLevel === 'number' &&
+        !isNaN(p.waterLevel)
+    );
+  } catch (e) {
+    return <Text>Invalid survey data</Text>;
+  }
 
   if (valid.length < 2) {
     return <Text>Insufficient valid points</Text>;
   }
 
-  // Sort points by distance
-  const sorted = [...valid].sort((a, b) => a.distance - b.distance);
+  let sorted = [];
+  let elevationData = [];
+  let waterLevelData = [];
+  try {
+    // Sort points by distance
+    sorted = [...valid].sort((a, b) => a.distance - b.distance);
 
-  // Prepare datasets
-  const elevationData = sorted.map((p) => ({ x: p.distance, y: p.elevation }));
-  const waterLevelData = sorted.map((p) => ({ x: p.distance, y: p.waterLevel }));
+    // Prepare datasets
+    elevationData = sorted.map((p) => ({ x: p.distance, y: p.elevation }));
+    waterLevelData = sorted.map((p) => ({ x: p.distance, y: p.waterLevel }));
+  } catch (err) {
+    return <Text>Unable to render chart</Text>;
+  }
 
   return (
     <View style={styles.section}>
