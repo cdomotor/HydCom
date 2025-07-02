@@ -6,7 +6,7 @@ import { getMagneticDeclination, convertToAhd } from '../utils/gpsUtils';
 import VisualCompass from './VisualCompass';
 import LocationMap from './LocationMap';
 
-const GPSStatus = ({ location, onRefresh, watchingPosition, toggleWatching }) => {
+const GPSStatus = ({ location, watchingPosition, toggleWatching }) => {
   const [mapVisible, setMapVisible] = useState(false);
   const [ahdElevation, setAhdElevation] = useState(null);
 
@@ -130,12 +130,6 @@ const GPSStatus = ({ location, onRefresh, watchingPosition, toggleWatching }) =>
           </TouchableOpacity>
         </View>
 
-        {/* Control Buttons */}
-        <View style={styles.buttonGrid}>
-          <View style={styles.buttonHalf}>
-            <Button title="Refresh GPS" onPress={onRefresh} />
-          </View>
-        </View>
       </View>
 
       <View style={styles.section}>
@@ -146,13 +140,6 @@ const GPSStatus = ({ location, onRefresh, watchingPosition, toggleWatching }) =>
             <Text style={compassStyles.compassHeading}>{compassLines[0]}</Text>
             <Text style={compassStyles.compassDirection}>{compassLines[1]}</Text>
             <Text style={compassStyles.compassTrue}>{compassLines[2]}</Text>
-            {location &&
-              location.coords.heading !== null &&
-              location.coords.heading !== undefined && (
-                <Text style={compassStyles.compassDirection}>
-                  💡 Live tracking: {watchingPosition ? 'ON' : 'OFF'}
-                </Text>
-              )}
             {(!location ||
               location.coords.heading === null ||
               location.coords.heading === undefined) && (

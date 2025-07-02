@@ -61,10 +61,10 @@ export const compassStyles = StyleSheet.create({
   },
   cardinalLabel: {
     position: 'absolute',
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    width: 20,
+    width: 24,
     textAlign: 'center',
   },
 });

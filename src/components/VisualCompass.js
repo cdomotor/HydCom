@@ -38,7 +38,7 @@ const VisualCompass = ({ location, size = 120 }) => {
                     {
                       transform: [
                         { rotate: `${degree}deg` },
-                        { translateY: -size/2 + 15 },
+                        { translateY: -size/2 + 20 },
                         { rotate: `${-degree}deg` }
                       ]
                     }
@@ -56,7 +56,7 @@ const VisualCompass = ({ location, size = 120 }) => {
                   {
                     transform: [
                       { rotate: `${degree}deg` },
-                      { translateY: -size/2 + 15 }
+                      { translateY: -size/2 + 20 }
                     ]
                   }
                 ]}
