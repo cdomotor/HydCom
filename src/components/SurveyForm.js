@@ -11,13 +11,12 @@ import {
   Platform 
 } from 'react-native';
 import { styles } from '../styles/AppStyles';
-import { 
-  calculateElevation, 
-  calculateRiseFall, 
+import {
+  calculateRiseFall,
   calculateSurveyStats,
-  calculateNewInstrumentHeight,
   validateSurveyPoint,
-  formatElevation 
+  formatElevation,
+  calculateHorizontalDistance
 } from '../utils/calculations';
 import CrossSectionChart from './CrossSectionChart';
 
@@ -39,11 +38,12 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
 
   const [newPoint, setNewPoint] = useState({
     distance: '',
-    backsight: '',
-    foresight: '',
+    elevation: '',
     depth: '',
     comment: '',
-    pointType: 'backsight'
+    pointType: 'backsight',
+    latitude: null,
+    longitude: null
   });
 
   const [editingPointIndex, setEditingPointIndex] = useState(null);
@@ -69,23 +69,11 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
   };
 
   const getPreviewElevationAndRiseFall = () => {
-    const backsight = parseFloat(newPoint.backsight);
-    const foresight = parseFloat(newPoint.foresight);
-    const currentIH = getCurrentInstrumentHeight();
-    
-    if (currentIH === null) return null;
-    
-    let elevation = null;
-    if (!isNaN(backsight) && newPoint.backsight !== '') {
-      elevation = currentIH + backsight;
-    } else if (!isNaN(foresight) && newPoint.foresight !== '') {
-      elevation = currentIH - foresight;
-    }
-    
-    if (elevation === null) return null;
-    
-    const lastPoint = surveyData.points.length > 0 
-      ? surveyData.points[surveyData.points.length - 1] 
+    const elevation = parseFloat(newPoint.elevation);
+    if (isNaN(elevation)) return null;
+
+    const lastPoint = surveyData.points.length > 0
+      ? surveyData.points[surveyData.points.length - 1]
       : null;
     
     const riseFall = lastPoint ? calculateRiseFall(elevation, lastPoint.elevation) : null;
@@ -194,15 +182,11 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
 
   const addSurveyPoint = () => {
     const distance = parseFloat(newPoint.distance);
-    const backsight = newPoint.backsight ? parseFloat(newPoint.backsight) : null;
-    const foresight = newPoint.foresight ? parseFloat(newPoint.foresight) : null;
+    const elevation = parseFloat(newPoint.elevation);
     const depth = parseFloat(newPoint.depth || '0');
     const comment = newPoint.comment.trim();
 
-    const validation = validateSurveyPoint(
-      { ...newPoint, distance, backsight, foresight, depth },
-      getCurrentInstrumentHeight()
-    );
+    const validation = validateSurveyPoint({ ...newPoint, distance, elevation, depth });
 
     if (!validation.isValid) {
       Alert.alert('Validation Error', validation.errors.join('\n'));
@@ -210,10 +194,8 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
     }
 
     const currentIH = getCurrentInstrumentHeight();
-    const elevation = calculateElevation(currentIH, backsight, foresight);
-    
-    if (elevation === null) {
-      Alert.alert('Error', 'Could not calculate elevation');
+    if (isNaN(elevation)) {
+      Alert.alert('Error', 'Elevation is required');
       return;
     }
 
@@ -226,8 +208,8 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
     const point = {
       distance: distance,
       elevation: elevation,
-      backsight: backsight,
-      foresight: foresight,
+      backsight: null,
+      foresight: null,
       depth: depth,
       comment: comment,
       pointType: newPoint.pointType,
@@ -235,7 +217,9 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
       rise: riseFall.rise,
       fall: riseFall.fall,
       difference: riseFall.difference,
-      instrumentHeight: currentIH
+      instrumentHeight: currentIH,
+      latitude: newPoint.latitude,
+      longitude: newPoint.longitude
     };
 
     let updatedPoints;
@@ -250,24 +234,13 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
     }
 
     if (newPoint.pointType === 'changepoint' && editingPointIndex === null) {
-      if (backsight === null || foresight === null) {
-        Alert.alert('Error', 'Change points require both backsight and foresight readings');
-        return;
-      }
-      
-      const newInstrumentHeight = calculateNewInstrumentHeight(elevation, backsight);
-      
       const changePoint = {
         pointIndex: updatedPoints.length - 1,
         elevation: elevation,
-        backsight: backsight,
-        foresight: foresight,
-        oldInstrumentHeight: currentIH,
-        newInstrumentHeight: newInstrumentHeight,
         distance: distance,
         comment: comment
       };
-      
+
       updatedChangePoints.push(changePoint);
     }
 
@@ -282,11 +255,12 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
 
     setNewPoint({
       distance: '',
-      backsight: '',
-      foresight: '',
+      elevation: '',
       depth: '',
       comment: '',
-      pointType: surveyData.points.length === 0 ? 'backsight' : 'intermediate'
+      pointType: surveyData.points.length === 0 ? 'backsight' : 'intermediate',
+      latitude: null,
+      longitude: null
     });
 
     if (stats.misclose !== null && stats.misclose > surveyData.miscloseTolerance) {
@@ -317,6 +291,22 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
       points: updatedPoints,
       changePoints: updatedChangePoints,
       ...stats
+    }));
+  };
+
+  const useGpsForPoint = () => {
+    if (!location || surveyData.points.length === 0 || surveyData.instrumentHeight === null) return;
+    const first = surveyData.points[0];
+    if (!first.latitude || !first.longitude) return;
+    const { latitude, longitude, altitude } = location.coords;
+    const distanceFromStart = calculateHorizontalDistance(first.latitude, first.longitude, latitude, longitude);
+    const elev = altitude + surveyData.instrumentHeight;
+    setNewPoint(prev => ({
+      ...prev,
+      distance: distanceFromStart.toFixed(2),
+      elevation: elev.toFixed(3),
+      latitude,
+      longitude
     }));
   };
 
@@ -354,11 +344,12 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
     });
     setNewPoint({
       distance: '',
-      backsight: '',
-      foresight: '',
+      elevation: '',
       depth: '',
       comment: '',
-      pointType: 'backsight'
+      pointType: 'backsight',
+      latitude: null,
+      longitude: null
     });
     setEditingPointIndex(null);
     setShowWorkflow(false);
@@ -428,6 +419,17 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
               <View style={styles.workflowReminder}>
                 <Text style={styles.reminderText}>
                   💡 Remember: "Begin on a Backsight, and Finish on a Foresight"
+                </Text>
+              </View>
+              <View style={{ marginTop: 10 }}>
+                <Text style={styles.tipTitle}>Glossary</Text>
+                <Text style={styles.tipDetails}>
+                  IH – Instrument Height{"\n"}
+                  CP – Change Point{"\n"}
+                  BM – Benchmark{"\n"}
+                  Chain – Distance along the section{"\n"}
+                  Elevation – Height in mAHD (Australian Height Datum){"\n"}
+                  Depth – Depth from ground to water surface
                 </Text>
               </View>
             </View>
@@ -502,35 +504,66 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
                   Foresight
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.typeButton, newPoint.pointType === 'changepoint' && styles.typeButtonActive]}
+              <TouchableOpacity
+                style={[styles.typeButton, styles.typeButtonSmall, newPoint.pointType === 'changepoint' && styles.typeButtonActive]}
                 onPress={() => setNewPoint(prev => ({ ...prev, pointType: 'changepoint' }))}
               >
                 <Text style={[styles.typeButtonText, newPoint.pointType === 'changepoint' && styles.typeButtonTextActive]}>
                   Change Point
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.typeButton, styles.typeButtonSmall, newPoint.pointType === 'benchmark' && styles.typeButtonActive]}
+                onPress={() => {
+                  if (Platform.OS === 'ios') {
+                    Alert.prompt(
+                      'Benchmark Elevation',
+                      'Enter known elevation in mAHD',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Set',
+                          onPress: (value) => {
+                            const val = parseFloat(value);
+                            if (!isNaN(val)) {
+                              setNewPoint(prev => ({ ...prev, pointType: 'benchmark', elevation: value }));
+                            }
+                          }
+                        }
+                      ],
+                      'plain-text',
+                      newPoint.elevation?.toString() || ''
+                    );
+                  } else {
+                    // Simple prompt alternatives for Android
+                    Alert.prompt(
+                      'Benchmark Elevation',
+                      'Enter known elevation in mAHD',
+                      [
+                        { text: 'OK', onPress: (value) => {
+                            const val = parseFloat(value);
+                            if (!isNaN(val)) setNewPoint(prev => ({ ...prev, pointType: 'benchmark', elevation: value }));
+                          }
+                        }
+                      ],
+                      'plain-text'
+                    );
+                  }
+                }}
+              >
+                <Text style={[styles.typeButtonText, newPoint.pointType === 'benchmark' && styles.typeButtonTextActive]}>
+                  Benchmark (BM)
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* Survey Tips */}
-          <View style={styles.surveyingTip}>
-            <Text style={styles.tipTitle}>💡 Surveying Workflow:</Text>
-            <Text style={styles.tipText}>
-              "Begin on a Backsight, and Finish on a Foresight"
-            </Text>
-            <Text style={styles.tipDetails}>
-              • <Text style={{fontWeight: 'bold'}}>Backsight (BS)</Text>: First reading on known point{'\n'}
-              • <Text style={{fontWeight: 'bold'}}>Intermediate (IS)</Text>: Readings on unknown points{'\n'}
-              • <Text style={{fontWeight: 'bold'}}>Foresight (FS)</Text>: Final reading before moving{'\n'}
-              • <Text style={{fontWeight: 'bold'}}>Change point</Text>: FS + BS combined
-            </Text>
-          </View>
+
 
           {/* Input Fields */}
           <View style={styles.inputRow}>
             <View style={styles.inputHalf}>
-              <Text style={styles.inputLabel}>Distance (m):</Text>
+              <Text style={styles.inputLabel}>Chain (m):</Text>
               <TextInput
                 style={styles.input}
                 value={newPoint.distance}
@@ -539,42 +572,24 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
                 keyboardType="numeric"
               />
             </View>
+            <View style={styles.inputHalf}>
+              <Text style={styles.inputLabel}>Elevation (mAHD):</Text>
+              <TextInput
+                style={styles.input}
+                value={newPoint.elevation}
+                onChangeText={(text) => setNewPoint(prev => ({ ...prev, elevation: text }))}
+                placeholder="0.000"
+                keyboardType="numeric"
+              />
+            </View>
           </View>
 
-          <View style={styles.inputRow}>
-            <View style={styles.inputHalf}>
-              <Text style={styles.inputLabel}>
-                Backsight (m): {newPoint.pointType === 'foresight' && '(optional)'}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  newPoint.pointType === 'foresight' && styles.inputDisabled
-                ]}
-                value={newPoint.backsight}
-                onChangeText={(text) => setNewPoint(prev => ({ ...prev, backsight: text }))}
-                placeholder="0.000"
-                keyboardType="numeric"
-                editable={newPoint.pointType !== 'foresight'}
-              />
-            </View>
-            
-            <View style={styles.inputHalf}>
-              <Text style={styles.inputLabel}>
-                Foresight (m): {newPoint.pointType === 'backsight' && '(optional)'}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  newPoint.pointType === 'backsight' && styles.inputDisabled
-                ]}
-                value={newPoint.foresight}
-                onChangeText={(text) => setNewPoint(prev => ({ ...prev, foresight: text }))}
-                placeholder="0.000"
-                keyboardType="numeric"
-                editable={newPoint.pointType !== 'backsight'}
-              />
-            </View>
+          <View style={{ marginBottom: 10, alignSelf: 'flex-start' }}>
+            <Button
+              title="Use GPS"
+              onPress={useGpsForPoint}
+              disabled={!location || surveyData.points.length === 0 || surveyData.instrumentHeight === null}
+            />
           </View>
 
           <View style={styles.inputRow}>
@@ -632,10 +647,9 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
           {/* Action Buttons */}
           <View style={styles.pointButtons}>
             <View style={styles.buttonThird}>
-              <Button 
-                title={editingPointIndex !== null ? "Update" : "Add"} 
+              <Button
+                title={editingPointIndex !== null ? 'Update' : 'Add'}
                 onPress={addSurveyPoint}
-                disabled={!getCurrentInstrumentHeight()}
               />
             </View>
             <View style={styles.buttonThird}>
@@ -654,11 +668,12 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
                     setEditingPointIndex(null);
                     setNewPoint({
                       distance: '',
-                      backsight: '',
-                      foresight: '',
+                      elevation: '',
                       depth: '',
                       comment: '',
-                      pointType: 'intermediate'
+                      pointType: 'intermediate',
+                      latitude: null,
+                      longitude: null
                     });
                   }}
                   color="gray"
@@ -687,11 +702,12 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
                 onPress={() => {
                   setNewPoint({
                     distance: point.distance.toString(),
-                    backsight: point.backsight ? point.backsight.toString() : '',
-                    foresight: point.foresight ? point.foresight.toString() : '',
+                    elevation: point.elevation.toString(),
                     depth: point.depth ? point.depth.toString() : '',
                     comment: point.comment || '',
-                    pointType: point.pointType || 'intermediate'
+                    pointType: point.pointType || 'intermediate',
+                    latitude: point.latitude || null,
+                    longitude: point.longitude || null
                   });
                   setEditingPointIndex(index);
                 }}
@@ -723,12 +739,9 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
                 <Text style={styles.changePointSummaryText}>
                   CP{index + 1}: {cp.distance}m @ {formatElevation(cp.elevation)}m
                 </Text>
-                <Text style={styles.changePointSummaryDetails}>
-                  IH: {formatElevation(cp.oldInstrumentHeight)}m → {formatElevation(cp.newInstrumentHeight)}m
-                </Text>
-                <Text style={styles.changePointSummaryDetails}>
-                  BS: {formatElevation(cp.backsight)}m | FS: {formatElevation(cp.foresight)}m
-                </Text>
+                {cp.comment ? (
+                  <Text style={styles.changePointSummaryDetails}>{cp.comment}</Text>
+                ) : null}
               </View>
             ))}
           </View>
@@ -783,7 +796,7 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
 
         <View style={styles.formSection}>
           <Text style={styles.helpText}>
-            💡 Tip: Set instrument height first, then add points with either backsight OR foresight (both for change points).
+            💡 Tip: Set instrument height first. Use "Use GPS" to auto-fill chain and elevation.
           </Text>
         </View>
       </ScrollView>

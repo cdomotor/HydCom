@@ -119,32 +119,21 @@ export const calculateNewInstrumentHeight = (pointElevation, backsightReading) =
 /**
  * Validate survey point data
  */
-export const validateSurveyPoint = (point, instrumentHeight) => {
+export const validateSurveyPoint = (point) => {
   const errors = [];
-  
+
   if (isNaN(point.distance) || point.distance < 0) {
-    errors.push('Distance must be a positive number');
+    errors.push('Chain must be a positive number');
   }
-  
-  if (instrumentHeight === null) {
-    errors.push('Instrument height must be set');
+
+  if (isNaN(point.elevation)) {
+    errors.push('Elevation must be a number');
   }
-  
-  const hasBacksight = !isNaN(point.backsight) && point.backsight !== null;
-  const hasForesight = !isNaN(point.foresight) && point.foresight !== null;
-  
-  if (!hasBacksight && !hasForesight) {
-    errors.push('Either backsight or foresight is required');
-  }
-  
-  if (point.pointType === 'changepoint' && (!hasBacksight || !hasForesight)) {
-    errors.push('Change points require both backsight and foresight readings');
-  }
-  
+
   if (point.depth < 0) {
     errors.push('Depth cannot be negative');
   }
-  
+
   return {
     isValid: errors.length === 0,
     errors
@@ -180,4 +169,20 @@ export const formatElevation = (elevation, precision = 3) => {
 export const formatDistance = (distance, precision = 2) => {
   if (distance === null || distance === undefined) return 'N/A';
   return distance.toFixed(precision);
+};
+
+/**
+ * Calculate horizontal distance between two GPS coordinates
+ */
+export const calculateHorizontalDistance = (lat1, lon1, lat2, lon2) => {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const R = 6371000; // metres
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 };

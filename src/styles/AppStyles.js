@@ -319,6 +319,12 @@ export const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
+
+  typeButtonSmall: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    minWidth: 60,
+  },
   
   typeButtonActive: {
     backgroundColor: '#3498db',
