@@ -34,8 +34,17 @@ const SunTrackPlot = ({ size = 220 }) => {
       <Text style={styles.sectionTitle}>Sun Tracks</Text>
       {!location && <Text>Getting GPS...</Text>}
       {location && (
-        <Svg width={size} height={size}>
-          <G rotation={-heading} origin={`${radius}, ${radius}`}>
+        <View
+          style={{
+            transform: [
+              { perspective: 600 },
+              { rotateX: `${pitch}deg` },
+              { rotateY: `${roll}deg` },
+            ],
+          }}
+        >
+          <Svg width={size} height={size}>
+            <G rotation={-heading} origin={`${radius}, ${radius}`}>
             {/* Horizon and guide lines */}
             <Circle cx={radius} cy={radius} r={radius} stroke="#ccc" strokeWidth={1} fill="none" />
             <Circle cx={radius} cy={radius} r={radius / 2} stroke="#eee" strokeWidth={1} fill="none" />
@@ -63,6 +72,7 @@ const SunTrackPlot = ({ size = 220 }) => {
             )}
           </G>
         </Svg>
+        </View>
       )}
       <Text style={{ marginTop: 5, fontSize: 12 }}>
         Pitch: {pitch.toFixed(1)}° Roll: {roll.toFixed(1)}°

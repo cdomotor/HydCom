@@ -1,6 +1,16 @@
 import React from 'react';
-import { View, Text } from 'react-native';
-import { VictoryChart, VictoryLine, VictoryScatter, VictoryAxis, VictoryTheme, VictoryLabel } from 'victory-native';
+import { View, Text, Platform } from 'react-native';
+
+// Use web Victory package when running in a web environment
+const Victory = Platform.OS === 'web' ? require('victory') : require('victory-native');
+const {
+  VictoryChart,
+  VictoryLine,
+  VictoryScatter,
+  VictoryAxis,
+  VictoryTheme,
+  VictoryLabel,
+} = Victory;
 import { styles } from '../styles/AppStyles';
 
 const CrossSectionChart = ({ points = [] }) => {

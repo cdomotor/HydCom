@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, View, StyleSheet, Button, Text } from 'react-native';
+import { Modal, View, StyleSheet, Button, Text, Platform } from 'react-native';
 import { Camera } from 'expo-camera';
 
 const CameraCapture = ({ visible, onClose, onPhoto }) => {
@@ -8,6 +8,11 @@ const CameraCapture = ({ visible, onClose, onPhoto }) => {
 
   useEffect(() => {
     (async () => {
+      if (Platform.OS === 'web') {
+        // Camera API not supported on web
+        setHasPermission(false);
+        return;
+      }
       const { status } = await Camera.requestCameraPermissionsAsync();
       setHasPermission(status === 'granted');
     })();
@@ -22,6 +27,17 @@ const CameraCapture = ({ visible, onClose, onPhoto }) => {
   };
 
   if (!visible) return null;
+
+  if (Platform.OS === 'web') {
+    return (
+      <Modal visible={visible} animationType="slide">
+        <View style={styles.center}>
+          <Text>Camera not supported on web</Text>
+          <Button title="Close" onPress={onClose} />
+        </View>
+      </Modal>
+    );
+  }
 
   if (hasPermission === null) {
     return (

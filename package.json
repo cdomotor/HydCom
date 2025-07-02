@@ -24,6 +24,7 @@
     "react-native-maps": "1.20.1",
     "react-native-svg": "15.11.2",
     "suncalc": "^1.9.0",
+    "victory": "^37.3.6",
     "victory-native": "^41.17.4"
   },
   "devDependencies": {
