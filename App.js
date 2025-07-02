@@ -7,6 +7,7 @@ import GPSStatus from './src/components/GPSStatus';
 import SampleForm from './src/components/SampleForm';
 import SurveyForm from './src/components/SurveyForm';
 import DataExport from './src/components/DataExport';
+import FieldCameraCapture from './src/components/FieldCameraCapture';
 
 // Hooks
 import useLocation from './src/hooks/useLocation';
@@ -20,6 +21,7 @@ export default function App() {
   // UI State
   const [showSampleForm, setShowSampleForm] = useState(false);
   const [showSurveyForm, setShowSurveyForm] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
 
   // Custom Hooks
   const { 
@@ -61,21 +63,27 @@ export default function App() {
         <Text style={styles.sectionTitle}>Field Operations</Text>
         <View style={styles.buttonGrid}>
           <View style={styles.buttonQuarter}>
-            <Button 
-              title="New Sample" 
-              onPress={() => setShowSampleForm(true)} 
+            <Button
+              title="New Sample"
+              onPress={() => setShowSampleForm(true)}
             />
           </View>
           <View style={styles.buttonQuarter}>
-            <Button 
-              title="Cross-Section" 
-              onPress={() => setShowSurveyForm(true)} 
+            <Button
+              title="Cross-Section"
+              onPress={() => setShowSurveyForm(true)}
             />
           </View>
           <View style={styles.buttonQuarter}>
             <Button
               title="Refresh GPS"
               onPress={refreshLocation}
+            />
+          </View>
+          <View style={styles.buttonQuarter}>
+            <Button
+              title="Field Camera"
+              onPress={() => setShowCamera(true)}
             />
           </View>
         </View>
@@ -136,6 +144,11 @@ export default function App() {
         onClose={() => setShowSurveyForm(false)}
         onSave={handleSurveySave}
         location={location}
+      />
+
+      <FieldCameraCapture
+        visible={showCamera}
+        onClose={() => setShowCamera(false)}
       />
     </ScrollView>
   );
