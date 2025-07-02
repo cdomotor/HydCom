@@ -1,4 +1,4 @@
-name: EAS Update on Push
+name: PUSH GO! (EAS Update)
 
 on:
   workflow_dispatch:
