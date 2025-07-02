@@ -61,21 +61,15 @@ export default function App() {
         <Text style={styles.sectionTitle}>Field Operations</Text>
         <View style={styles.buttonGrid}>
           <View style={styles.buttonQuarter}>
-            <Button 
-              title="New Sample" 
-              onPress={() => setShowSampleForm(true)} 
-            />
-          </View>
-          <View style={styles.buttonQuarter}>
-            <Button 
-              title="Cross-Section" 
-              onPress={() => setShowSurveyForm(true)} 
+            <Button
+              title="Cross-Section"
+              onPress={() => setShowSurveyForm(true)}
             />
           </View>
           <View style={styles.buttonQuarter}>
             <Button
-              title="Refresh GPS"
-              onPress={refreshLocation}
+              title="New Sample"
+              onPress={() => setShowSampleForm(true)}
             />
           </View>
         </View>

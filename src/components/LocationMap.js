@@ -4,7 +4,7 @@ import MapView, { Marker, UrlTile } from 'react-native-maps';
 
 const INITIAL_DELTA = 0.01; // roughly zoom level 15
 
-const LocationMap = ({ location }) => {
+const LocationMap = ({ location, height = 200 }) => {
   if (!location) {
     return <Text style={styles.loadingText}>Waiting for location...</Text>;
   }
@@ -27,7 +27,7 @@ const LocationMap = ({ location }) => {
   }, [latitude, longitude]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { height }]}>
       <MapView
         style={styles.map}
         region={region}

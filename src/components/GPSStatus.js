@@ -1,20 +1,24 @@
-import React from 'react';
-import { View, Text, Button } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Button, Modal, TouchableOpacity } from 'react-native';
 import { styles } from '../styles/AppStyles';
 import { compassStyles } from '../styles/CompassStyles';
 import { getMagneticDeclination } from '../utils/gpsUtils';
 import VisualCompass from './VisualCompass';
+import LocationMap from './LocationMap';
 
 const GPSStatus = ({ location, onRefresh, watchingPosition, toggleWatching }) => {
+  const [mapVisible, setMapVisible] = useState(false);
   const formatLocation = () => {
     if (!location) return 'Getting GPS...';
     
     const lat = location.coords.latitude.toFixed(6);
     const lon = location.coords.longitude.toFixed(6);
     const alt = location.coords.altitude ? location.coords.altitude.toFixed(1) : 'N/A';
-    const acc = location.coords.accuracy ? location.coords.accuracy.toFixed(1) : 'N/A';
-    
-    return `Lat: ${lat}\nLon: ${lon}\nAlt: ${alt}m\nAccuracy: ±${acc}m`;
+    const hAcc = location.coords.accuracy ? location.coords.accuracy.toFixed(1) : 'N/A';
+    const vAccVal = location.coords.altitudeAccuracy ?? location.coords.verticalAccuracy;
+    const vAcc = vAccVal ? vAccVal.toFixed(1) : 'N/A';
+
+    return `Lat: ${lat}\nLon: ${lon}\nAlt: ${alt}m\nH-Acc: ±${hAcc}m\nV-Acc: ±${vAcc}m`;
   };
 
   const formatCompass = () => {
@@ -86,33 +90,31 @@ const GPSStatus = ({ location, onRefresh, watchingPosition, toggleWatching }) =>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>GPS & Location</Text>
 
-        {/* GPS Coordinates */}
-        <View
-          style={[
-            styles.locationText,
-            { borderLeftColor: getAccuracyColor(), borderLeftWidth: 4 }
-          ]}
-        >
-          <Text style={styles.locationCoordinates}>{formatLocation()}</Text>
-          {location && (
-            <Text style={[styles.accuracyStatus, { color: getAccuracyColor() }]}>
-              Status: {getAccuracyStatus().toUpperCase()}
-              {watchingPosition && ' • LIVE'}
-            </Text>
-          )}
+        {/* Coordinates and mini map */}
+        <View style={styles.locationContainer}>
+          <View
+            style={[
+              styles.locationText,
+              { borderLeftColor: getAccuracyColor(), borderLeftWidth: 4 }
+            ]}
+          >
+            <Text style={styles.locationCoordinates}>{formatLocation()}</Text>
+            {location && (
+              <Text style={[styles.accuracyStatus, { color: getAccuracyColor() }]}> 
+                Status: {getAccuracyStatus().toUpperCase()}
+                {watchingPosition && ' • LIVE'}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity onPress={() => setMapVisible(true)}>
+            <LocationMap location={location} height={120} />
+          </TouchableOpacity>
         </View>
 
         {/* Control Buttons */}
         <View style={styles.buttonGrid}>
           <View style={styles.buttonHalf}>
             <Button title="Refresh GPS" onPress={onRefresh} />
-          </View>
-          <View style={styles.buttonHalf}>
-            <Button
-              title={watchingPosition ? 'Stop Live' : 'Start Live'}
-              onPress={toggleWatching}
-              color={watchingPosition ? '#dc3545' : '#28a745'}
-            />
           </View>
         </View>
       </View>
@@ -142,6 +144,13 @@ const GPSStatus = ({ location, onRefresh, watchingPosition, toggleWatching }) =>
           </View>
         </View>
       </View>
+
+      <Modal visible={mapVisible} animationType="slide">
+        <View style={styles.modalContainer}>
+          <LocationMap location={location} height={400} />
+          <Button title="Close Map" onPress={() => setMapVisible(false)} />
+        </View>
+      </Modal>
     </View>
   );
 };

@@ -59,4 +59,12 @@ export const compassStyles = StyleSheet.create({
     color: 'orange',
     fontStyle: 'italic',
   },
+  cardinalLabel: {
+    position: 'absolute',
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#333',
+    width: 20,
+    textAlign: 'center',
+  },
 });
