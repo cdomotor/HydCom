@@ -11,7 +11,7 @@ permissions:
 jobs:
   automerge:
     if: |
-      github.event.pull_request.user.login == 'cdomotor' # &&
+      github.event.pull_request.user.login == 'cdomotor' &&
       contains(github.event.pull_request.title, 'codex')
     runs-on: ubuntu-latest
     steps:
