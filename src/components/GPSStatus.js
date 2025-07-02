@@ -1,24 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Button, Modal, TouchableOpacity } from 'react-native';
 import { styles } from '../styles/AppStyles';
 import { compassStyles } from '../styles/CompassStyles';
-import { getMagneticDeclination } from '../utils/gpsUtils';
+import { getMagneticDeclination, convertToAhd } from '../utils/gpsUtils';
 import VisualCompass from './VisualCompass';
 import LocationMap from './LocationMap';
 
 const GPSStatus = ({ location, onRefresh, watchingPosition, toggleWatching }) => {
   const [mapVisible, setMapVisible] = useState(false);
+  const [ahdElevation, setAhdElevation] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const calcAhd = async () => {
+      if (location && location.coords.altitude != null) {
+        const { latitude, longitude, altitude } = location.coords;
+        try {
+          const elev = await convertToAhd(latitude, longitude, altitude);
+          if (!cancelled) setAhdElevation(elev);
+        } catch (err) {
+          if (!cancelled) setAhdElevation(null);
+        }
+      }
+    };
+    calcAhd();
+    return () => { cancelled = true; };
+  }, [location]);
   const formatLocation = () => {
     if (!location) return 'Getting GPS...';
-    
+
     const lat = location.coords.latitude.toFixed(6);
     const lon = location.coords.longitude.toFixed(6);
     const alt = location.coords.altitude ? location.coords.altitude.toFixed(1) : 'N/A';
+    const elev = ahdElevation !== null ? ahdElevation.toFixed(1) : 'N/A';
     const hAcc = location.coords.accuracy ? location.coords.accuracy.toFixed(1) : 'N/A';
     const vAccVal = location.coords.altitudeAccuracy ?? location.coords.verticalAccuracy;
     const vAcc = vAccVal ? vAccVal.toFixed(1) : 'N/A';
 
-    return `Lat: ${lat}\nLon: ${lon}\nAlt: ${alt}m\nH-Acc: ±${hAcc}m\nV-Acc: ±${vAcc}m`;
+    return `Lat: ${lat}\nLon: ${lon}\nAlt: ${alt}m\nElev: ${elev}m\nH-Acc: ±${hAcc}m\nV-Acc: ±${vAcc}m`;
   };
 
   const formatCompass = () => {
@@ -106,7 +125,7 @@ const GPSStatus = ({ location, onRefresh, watchingPosition, toggleWatching }) =>
               </Text>
             )}
           </View>
-          <TouchableOpacity onPress={() => setMapVisible(true)}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={() => setMapVisible(true)}>
             <LocationMap location={location} height={120} />
           </TouchableOpacity>
         </View>

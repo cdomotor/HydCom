@@ -60,8 +60,34 @@ export const getCompassEmoji = (heading) => {
  * Check if compass is available and calibrated
  */
 export const isCompassAvailable = (location) => {
-  return location && 
-         location.coords && 
-         location.coords.heading !== null && 
+  return location &&
+         location.coords &&
+         location.coords.heading !== null &&
          location.coords.heading !== undefined;
+};
+
+/**
+ * Attempt to fetch geoid offset to convert WGS84 altitude to AHD.
+ * Returns 0 on failure.
+ */
+export const fetchGeoidOffset = async (latitude, longitude) => {
+  try {
+    const url = `https://ausgeoid.ga.gov.au/gda2020?latitude=${latitude}&longitude=${longitude}&output=json`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data && typeof data.geoidHeight === 'number') {
+      return data.geoidHeight;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch geoid offset', err.message);
+  }
+  return 0;
+};
+
+/**
+ * Convert ellipsoidal altitude to approximate AHD elevation.
+ */
+export const convertToAhd = async (latitude, longitude, altitude) => {
+  const offset = await fetchGeoidOffset(latitude, longitude);
+  return altitude - offset;
 };

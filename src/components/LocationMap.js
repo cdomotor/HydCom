@@ -30,7 +30,7 @@ const LocationMap = ({ location, height = 200 }) => {
     <View style={[styles.container, { height }]}>
       <MapView
         style={styles.map}
-        region={region}
+        initialRegion={region}
         onRegionChangeComplete={setRegion}
       >
         <UrlTile urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -42,6 +42,7 @@ const LocationMap = ({ location, height = 200 }) => {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     height: 200,
     borderRadius: 10,
     overflow: 'hidden',

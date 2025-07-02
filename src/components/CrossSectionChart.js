@@ -4,14 +4,31 @@ import { VictoryChart, VictoryLine, VictoryScatter, VictoryAxis, VictoryTheme, V
 import { styles } from '../styles/AppStyles';
 
 const CrossSectionChart = ({ points = [] }) => {
-  if (!points || points.length === 0) return <Text>No survey data</Text>;
+  if (!points || points.length < 2) {
+    return <Text>Need at least 2 points</Text>;
+  }
+
+  // Filter out any invalid or NaN values which can crash Victory
+  const valid = points.filter(
+    (p) =>
+      typeof p.distance === 'number' &&
+      !isNaN(p.distance) &&
+      typeof p.elevation === 'number' &&
+      !isNaN(p.elevation) &&
+      typeof p.waterLevel === 'number' &&
+      !isNaN(p.waterLevel)
+  );
+
+  if (valid.length < 2) {
+    return <Text>Insufficient valid points</Text>;
+  }
 
   // Sort points by distance
-  const sorted = [...points].sort((a, b) => a.distance - b.distance);
+  const sorted = [...valid].sort((a, b) => a.distance - b.distance);
 
   // Prepare datasets
-  const elevationData = sorted.map(p => ({ x: p.distance, y: p.elevation }));
-  const waterLevelData = sorted.map(p => ({ x: p.distance, y: p.waterLevel }));
+  const elevationData = sorted.map((p) => ({ x: p.distance, y: p.elevation }));
+  const waterLevelData = sorted.map((p) => ({ x: p.distance, y: p.waterLevel }));
 
   return (
     <View style={styles.section}>
