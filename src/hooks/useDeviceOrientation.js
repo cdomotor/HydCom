@@ -16,6 +16,16 @@ const useDeviceOrientation = () => {
 
     const start = async () => {
       try {
+        // Request DeviceMotion permission on supported platforms
+        if (DeviceMotion.requestPermissionsAsync) {
+          const { status } = await DeviceMotion.requestPermissionsAsync();
+          if (status !== 'granted') return;
+        }
+      } catch (e) {
+        // Permission API not available or permission denied
+      }
+
+      try {
         // Get heading updates
         headingSub = await Location.watchHeadingAsync((data) => {
           const current = data.trueHeading !== -1 ? data.trueHeading : data.magHeading;
