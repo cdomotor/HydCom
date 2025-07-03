@@ -550,6 +550,12 @@ const styles = StyleSheet.create({
 
 **Barcode scanner black screen?**
 - Grant camera permission in iPhone Settings > Expo Go > Camera
+- If the screen stays blank, reinstall the camera module and restart Expo:
+
+  ```bash
+  expo install expo-camera
+  npx expo start -c
+  ```
 
 **App crashes?**
 - Check Command Prompt for error messages
