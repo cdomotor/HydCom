@@ -5,12 +5,23 @@ import { styles } from '../styles/AppStyles';
 import useSunTracks from '../hooks/useSunTracks';
 import useDeviceOrientation from '../hooks/useDeviceOrientation';
 
+// Rough 3D projection of spherical coordinates onto the SVG plane
 const polarToCartesian = (radius, azimuth, elevation) => {
-  const r = radius * (1 - Math.max(elevation, -90) / 90);
-  const angle = (azimuth - 90) * Math.PI / 180; // 0 deg at north
+  const az = (azimuth - 90) * Math.PI / 180; // 0 deg at north
+  const el = elevation * Math.PI / 180;
+
+  // Convert to Cartesian unit sphere
+  const x = Math.cos(el) * Math.cos(az);
+  const y = Math.cos(el) * Math.sin(az);
+  const z = Math.sin(el);
+
+  // Simple perspective projection for "3D" look
+  const px = radius * x + z * radius * 0.5;
+  const py = radius * -y - z * radius * 0.5;
+
   return {
-    x: radius + r * Math.cos(angle),
-    y: radius + r * Math.sin(angle),
+    x: radius + px,
+    y: radius + py,
   };
 };
 
@@ -24,10 +35,29 @@ const buildPath = (radius, points) => {
     .join(' ');
 };
 
+const buildFilledRegion = (radius, upper, lower) => {
+  if (!upper || !lower || upper.length === 0 || lower.length === 0) return '';
+  const upperPath = upper.map((p, i) => {
+    const { x, y } = polarToCartesian(radius, p.azimuth, p.elevation);
+    return `${i === 0 ? 'M' : 'L'}${x} ${y}`;
+  }).join(' ');
+  const lowerPath = [...lower].reverse().map((p) => {
+    const { x, y } = polarToCartesian(radius, p.azimuth, p.elevation);
+    return `L${x} ${y}`;
+  }).join(' ');
+  return `${upperPath} ${lowerPath} Z`;
+};
+
 const SunTrackPlot = ({ size = 220 }) => {
   const { tracks, currentSun, location } = useSunTracks();
   const { heading, pitch, roll } = useDeviceOrientation();
   const radius = size / 2;
+
+  const midIdx = 12;
+  const optimalAngle =
+    tracks.summer[midIdx] && tracks.winter[midIdx]
+      ? (tracks.summer[midIdx].elevation + tracks.winter[midIdx].elevation) / 2
+      : null;
 
   return (
     <View style={[styles.section, { alignItems: 'center' }]}>
@@ -50,6 +80,12 @@ const SunTrackPlot = ({ size = 220 }) => {
             <Circle cx={radius} cy={radius} r={radius / 2} stroke="#eee" strokeWidth={1} fill="none" />
             <Line x1={radius} y1={0} x2={radius} y2={size} stroke="#ddd" />
             <Line x1={0} y1={radius} x2={size} y2={radius} stroke="#ddd" />
+            {/* Sky dome between summer and winter tracks */}
+            <Path
+              d={buildFilledRegion(radius, tracks.summer, tracks.winter)}
+              fill="rgba(135,206,235,0.2)"
+              stroke="none"
+            />
             {/* Sun tracks */}
             <Path d={buildPath(radius, tracks.summer)} stroke="#ff8c00" strokeWidth={2} fill="none" />
             <Path d={buildPath(radius, tracks.winter)} stroke="#1e90ff" strokeWidth={2} fill="none" />
@@ -77,6 +113,11 @@ const SunTrackPlot = ({ size = 220 }) => {
       <Text style={{ marginTop: 5, fontSize: 12 }}>
         Pitch: {pitch.toFixed(1)}° Roll: {roll.toFixed(1)}°
       </Text>
+      {optimalAngle !== null && (
+        <Text style={{ marginTop: 2, fontSize: 12 }}>
+          Optimal Panel Angle: {optimalAngle.toFixed(1)}°
+        </Text>
+      )}
     </View>
   );
 };

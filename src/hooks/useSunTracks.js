@@ -41,22 +41,29 @@ const useSunTracks = () => {
   useEffect(() => {
     if (!location) return;
     const { latitude, longitude } = location;
-    const now = new Date();
-    const year = now.getFullYear();
-    const summer = new Date(year, 11, 21); // Dec 21
-    const winter = new Date(year, 5, 21);  // Jun 21
 
-    setTracks({
-      current: getTrack(now, latitude, longitude),
-      summer: getTrack(summer, latitude, longitude),
-      winter: getTrack(winter, latitude, longitude),
-    });
+    const updateTracks = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const summer = new Date(year, 11, 21); // Dec 21
+      const winter = new Date(year, 5, 21);  // Jun 21
 
-    const posNow = SunCalc.getPosition(now, latitude, longitude);
-    setCurrentSun({
-      azimuth: (deg(posNow.azimuth) + 180) % 360,
-      elevation: deg(posNow.altitude),
-    });
+      setTracks({
+        current: getTrack(now, latitude, longitude),
+        summer: getTrack(summer, latitude, longitude),
+        winter: getTrack(winter, latitude, longitude),
+      });
+
+      const posNow = SunCalc.getPosition(now, latitude, longitude);
+      setCurrentSun({
+        azimuth: (deg(posNow.azimuth) + 180) % 360,
+        elevation: deg(posNow.altitude),
+      });
+    };
+
+    updateTracks();
+    const timer = setInterval(updateTracks, 60 * 60 * 1000); // refresh hourly
+    return () => clearInterval(timer);
   }, [location]);
 
   return { tracks, currentSun, location };

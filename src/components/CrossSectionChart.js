@@ -30,6 +30,11 @@ const CrossSectionChart = ({ points = [] }) => {
         typeof p.waterLevel === 'number' &&
         !isNaN(p.waterLevel)
     );
+    // Remove duplicate distance entries which can cause rendering errors
+    valid = valid.filter(
+      (p, idx, arr) =>
+        arr.findIndex((q) => q.distance === p.distance) === idx
+    );
   } catch (e) {
     return <Text>Invalid survey data</Text>;
   }
