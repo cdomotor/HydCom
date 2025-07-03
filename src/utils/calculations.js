@@ -75,15 +75,19 @@ export const calculateSurveyStats = (points) => {
     };
   }
 
-  const elevations = points.map(p => p.elevation);
-  const depths = points.map(p => p.depth || 0);
-  const distances = points.map(p => p.distance);
+  const elevations = points.map(p => Number(p.elevation)).filter(n => !isNaN(n));
+  const depths = points.map(p => Number(p.depth || 0)).filter(n => !isNaN(n));
+  const distances = points.map(p => Number(p.distance)).filter(n => !isNaN(n));
 
-  const maxDepth = Math.max(...depths);
-  const avgDepth = depths.reduce((sum, depth) => sum + depth, 0) / depths.length;
-  const width = Math.max(...distances) - Math.min(...distances);
-  const startElevation = points[0].elevation;
-  const endElevation = points[points.length - 1].elevation;
+  const maxDepth = depths.length ? Math.max(...depths) : 0;
+  const avgDepth = depths.length
+    ? depths.reduce((sum, depth) => sum + depth, 0) / depths.length
+    : 0;
+  const width = distances.length
+    ? Math.max(...distances) - Math.min(...distances)
+    : 0;
+  const startElevation = elevations.length > 0 ? elevations[0] : null;
+  const endElevation = elevations.length > 0 ? elevations[elevations.length - 1] : null;
   const misclose = calculateMisclose(points);
 
   // Calculate total rise and fall

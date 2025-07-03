@@ -4,6 +4,7 @@ import { Camera } from 'expo-camera';
 
 const CameraCapture = ({ visible, onClose, onPhoto }) => {
   const [hasPermission, setHasPermission] = useState(null);
+  const [cameraReady, setCameraReady] = useState(false);
   const cameraRef = useRef(null);
 
   useEffect(() => {
@@ -60,7 +61,17 @@ const CameraCapture = ({ visible, onClose, onPhoto }) => {
 
   return (
     <Modal visible={visible} animationType="slide">
-      <Camera style={{ flex: 1 }} ref={cameraRef} />
+      <Camera
+        style={{ flex: 1 }}
+        ref={cameraRef}
+        type={Camera.Constants.Type.back}
+        onCameraReady={() => setCameraReady(true)}
+      />
+      {!cameraReady && (
+        <View style={[styles.center, StyleSheet.absoluteFill]}>
+          <Text>Loading camera...</Text>
+        </View>
+      )}
       <View style={styles.controls}>
         <Button title="Snap" onPress={takePhoto} />
         <Button title="Close" onPress={onClose} />

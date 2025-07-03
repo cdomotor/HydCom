@@ -228,6 +228,9 @@ const SurveyForm = ({ visible, onClose, onSave, location }) => {
     if (editingPointIndex !== null) {
       updatedPoints = [...surveyData.points];
       updatedPoints[editingPointIndex] = point;
+      updatedChangePoints = updatedChangePoints.map(cp =>
+        cp.pointIndex === editingPointIndex ? { ...cp, elevation } : cp
+      );
       setEditingPointIndex(null);
     } else {
       updatedPoints = [...surveyData.points, point];

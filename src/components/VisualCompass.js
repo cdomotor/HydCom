@@ -29,20 +29,22 @@ const VisualCompass = ({ location, size = 120 }) => {
           {/* Degree Markings and Cardinal Labels */}
           {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((degree) => {
             const cardinal = {0: 'N', 90: 'E', 180: 'S', 270: 'W'}[degree];
+            const baseStyle = {
+              position: 'absolute',
+              left: size / 2,
+              top: size / 2,
+              transform: [
+                { translateX: -size / 2 },
+                { translateY: -size / 2 },
+                { rotate: `${degree}deg` },
+                { translateY: -size / 2 + 20 },
+              ],
+            };
             if (cardinal) {
               return (
                 <Text
                   key={degree}
-                  style={[
-                    compassStyles.cardinalLabel,
-                    {
-                      transform: [
-                        { rotate: `${degree}deg` },
-                        { translateY: -size/2 + 20 },
-                        { rotate: `${-degree}deg` }
-                      ]
-                    }
-                  ]}
+                  style={[baseStyle, compassStyles.cardinalLabel, { transform: [...baseStyle.transform, { rotate: `${-degree}deg` }] }]}
                 >
                   {cardinal}
                 </Text>
@@ -51,15 +53,7 @@ const VisualCompass = ({ location, size = 120 }) => {
             return (
               <View
                 key={degree}
-                style={[
-                  compassStyles.degreeMark,
-                  {
-                    transform: [
-                      { rotate: `${degree}deg` },
-                      { translateY: -size/2 + 20 }
-                    ]
-                  }
-                ]}
+                style={[baseStyle, compassStyles.degreeMark]}
               />
             );
           })}
