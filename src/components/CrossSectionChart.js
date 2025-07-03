@@ -20,16 +20,19 @@ const CrossSectionChart = ({ points = [] }) => {
 
   let valid = [];
   try {
-    // Filter out invalid or NaN values which can crash Victory
-    valid = points.filter(
-      (p) =>
-        typeof p.distance === 'number' &&
-        !isNaN(p.distance) &&
-        typeof p.elevation === 'number' &&
-        !isNaN(p.elevation) &&
-        typeof p.waterLevel === 'number' &&
-        !isNaN(p.waterLevel)
-    );
+    // Coerce numeric strings to numbers and filter out invalid values
+    valid = points
+      .map((p) => ({
+        distance: typeof p.distance === 'string' ? parseFloat(p.distance) : p.distance,
+        elevation: typeof p.elevation === 'string' ? parseFloat(p.elevation) : p.elevation,
+        waterLevel: typeof p.waterLevel === 'string' ? parseFloat(p.waterLevel) : p.waterLevel,
+      }))
+      .filter(
+        (p) =>
+          typeof p.distance === 'number' && !isNaN(p.distance) &&
+          typeof p.elevation === 'number' && !isNaN(p.elevation) &&
+          typeof p.waterLevel === 'number' && !isNaN(p.waterLevel)
+      );
     // Remove duplicate distance entries which can cause rendering errors
     valid = valid.filter(
       (p, idx, arr) =>

@@ -7,7 +7,7 @@ import GPSStatus from './src/components/GPSStatus';
 import SampleForm from './src/components/SampleForm';
 import SurveyForm from './src/components/SurveyForm';
 import DataExport from './src/components/DataExport';
-import SunTrackPlot from './src/components/SunTrackPlot';
+import SunTracker3D from './src/components/SunTracker3D';
 import CameraCapture from './src/components/CameraCapture';
 
 // Hooks
@@ -57,8 +57,8 @@ export default function App() {
         toggleWatching={toggleWatching}
       />
 
-      {/* Sun Track Plot */}
-      <SunTrackPlot />
+      {/* 3D Sun Tracker */}
+      <SunTracker3D />
 
       {/* Operations Panel */}
       <View style={styles.section}>
