@@ -5,44 +5,56 @@ import { styles } from '../styles/AppStyles';
 import useSunTracks from '../hooks/useSunTracks';
 import useDeviceOrientation from '../hooks/useDeviceOrientation';
 
-// Rough 3D projection of spherical coordinates onto the SVG plane
-const polarToCartesian = (radius, azimuth, elevation) => {
+// Project spherical coordinates onto the SVG plane with optional device tilt
+const polarToCartesian = (radius, azimuth, elevation, pitch = 0, roll = 0) => {
   const az = (azimuth - 90) * Math.PI / 180; // 0 deg at north
   const el = elevation * Math.PI / 180;
+  const ph = pitch * Math.PI / 180;
+  const rl = roll * Math.PI / 180;
 
   // Convert to Cartesian unit sphere
-  const x = Math.cos(el) * Math.cos(az);
-  const y = Math.cos(el) * Math.sin(az);
-  const z = Math.sin(el);
+  let x = Math.cos(el) * Math.cos(az);
+  let y = Math.cos(el) * Math.sin(az);
+  let z = Math.sin(el);
 
-  // Simple perspective projection for "3D" look
-  const px = radius * x + z * radius * 0.5;
-  const py = radius * -y - z * radius * 0.5;
+  // Apply pitch (rotation around X)
+  let y1 = y * Math.cos(ph) - z * Math.sin(ph);
+  let z1 = y * Math.sin(ph) + z * Math.cos(ph);
+
+  // Apply roll (rotation around Y)
+  let x1 = x * Math.cos(rl) + z1 * Math.sin(rl);
+  z = -x * Math.sin(rl) + z1 * Math.cos(rl);
+  x = x1;
+  y = y1;
+
+  // Perspective projection
+  const perspective = 2.5;
+  const scale = 1 / (1 - z / perspective);
 
   return {
-    x: radius + px,
-    y: radius + py,
+    x: radius + radius * x * scale,
+    y: radius - radius * y * scale,
   };
 };
 
-const buildPath = (radius, points) => {
+const buildPath = (radius, points, pitch, roll) => {
   if (!points || points.length === 0) return '';
   return points
     .map((p, i) => {
-      const { x, y } = polarToCartesian(radius, p.azimuth, p.elevation);
+      const { x, y } = polarToCartesian(radius, p.azimuth, p.elevation, pitch, roll);
       return `${i === 0 ? 'M' : 'L'}${x} ${y}`;
     })
     .join(' ');
 };
 
-const buildFilledRegion = (radius, upper, lower) => {
+const buildFilledRegion = (radius, upper, lower, pitch, roll) => {
   if (!upper || !lower || upper.length === 0 || lower.length === 0) return '';
   const upperPath = upper.map((p, i) => {
-    const { x, y } = polarToCartesian(radius, p.azimuth, p.elevation);
+    const { x, y } = polarToCartesian(radius, p.azimuth, p.elevation, pitch, roll);
     return `${i === 0 ? 'M' : 'L'}${x} ${y}`;
   }).join(' ');
   const lowerPath = [...lower].reverse().map((p) => {
-    const { x, y } = polarToCartesian(radius, p.azimuth, p.elevation);
+    const { x, y } = polarToCartesian(radius, p.azimuth, p.elevation, pitch, roll);
     return `L${x} ${y}`;
   }).join(' ');
   return `${upperPath} ${lowerPath} Z`;
@@ -64,15 +76,7 @@ const SunTrackPlot = ({ size = 220 }) => {
       <Text style={styles.sectionTitle}>Sun Tracks</Text>
       {!location && <Text>Getting GPS...</Text>}
       {location && (
-        <View
-          style={{
-            transform: [
-              { perspective: 600 },
-              { rotateX: `${pitch}deg` },
-              { rotateY: `${roll}deg` },
-            ],
-          }}
-        >
+        <View>
           <Svg width={size} height={size}>
             <G rotation={-heading} origin={`${radius}, ${radius}`}>
             {/* Horizon and guide lines */}
@@ -82,29 +86,34 @@ const SunTrackPlot = ({ size = 220 }) => {
             <Line x1={0} y1={radius} x2={size} y2={radius} stroke="#ddd" />
             {/* Sky dome between summer and winter tracks */}
             <Path
-              d={buildFilledRegion(radius, tracks.summer, tracks.winter)}
+              d={buildFilledRegion(radius, tracks.summer, tracks.winter, pitch, roll)}
               fill="rgba(135,206,235,0.2)"
               stroke="none"
             />
             {/* Sun tracks */}
-            <Path d={buildPath(radius, tracks.summer)} stroke="#ff8c00" strokeWidth={2} fill="none" />
-            <Path d={buildPath(radius, tracks.winter)} stroke="#1e90ff" strokeWidth={2} fill="none" />
-            <Path d={buildPath(radius, tracks.current)} stroke="#2ecc71" strokeWidth={2} fill="none" />
+            <Path d={buildPath(radius, tracks.summer, pitch, roll)} stroke="#ff8c00" strokeWidth={2} fill="none" />
+            <Path d={buildPath(radius, tracks.winter, pitch, roll)} stroke="#1e90ff" strokeWidth={2} fill="none" />
+            <Path d={buildPath(radius, tracks.current, pitch, roll)} stroke="#2ecc71" strokeWidth={2} fill="none" />
             {currentSun && (
-              <>
-                <Circle
-                  cx={polarToCartesian(radius, currentSun.azimuth, currentSun.elevation).x}
-                  cy={polarToCartesian(radius, currentSun.azimuth, currentSun.elevation).y}
-                  r={4}
-                  fill="yellow"
-                  stroke="black"
-                />
-                <Text
-                  style={{ position: 'absolute', left: radius - 15, top: radius - 10, fontSize: 12 }}
-                >
-                  ☀
-                </Text>
-              </>
+              (() => {
+                const pos = polarToCartesian(
+                  radius,
+                  currentSun.azimuth,
+                  currentSun.elevation,
+                  pitch,
+                  roll
+                );
+                return (
+                  <>
+                    <Circle cx={pos.x} cy={pos.y} r={4} fill="yellow" stroke="black" />
+                    <Text
+                      style={{ position: 'absolute', left: pos.x - 15, top: pos.y - 10, fontSize: 12 }}
+                    >
+                      ☀
+                    </Text>
+                  </>
+                );
+              })()
             )}
           </G>
         </Svg>
