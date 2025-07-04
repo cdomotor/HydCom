@@ -26,10 +26,19 @@ jobs:
       - name: Prebuild
         run: CI=1 npx expo prebuild
 
-      - name: Get PR title
-        run: echo "PR_TITLE=$(gh pr view --json title -q .title)" >> $GITHUB_ENV
+      - name: Try get PR title
+        id: get_title
+        run: |
+          echo "Trying to fetch PR title..."
+          title=$(gh pr view --json title -q .title 2>/dev/null || echo "")
+          if [ -z "$title" ]; then
+            echo "No PR found, using latest commit message"
+            title=$(git log -1 --pretty=%s)
+          fi
+          echo "PR_TITLE=$title" >> $GITHUB_ENV
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
       - name: Stamp app name with PR title and timestamp
         run: node scripts/stamp-app-name.js
