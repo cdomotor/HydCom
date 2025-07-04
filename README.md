@@ -8,6 +8,10 @@ After cloning or pulling new updates, install dependencies to ensure all require
 ```bash
 npm install
 ```
+If you encounter an error about `react-native-reanimated` when running the app, install it via:
+```bash
+npx expo install react-native-reanimated
+```
 
 This step is required whenever `package.json` changes.
 
