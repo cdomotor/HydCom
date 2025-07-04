@@ -13,6 +13,12 @@ If you encounter an error about `react-native-reanimated` when running the app, 
 npx expo install react-native-reanimated
 ```
 
+Ensure `index.js` imports `react-native-reanimated` before other modules:
+
+```javascript
+import 'react-native-reanimated';
+```
+
 This step is required whenever `package.json` changes.
 
 ## Troubleshooting Camera Issues
