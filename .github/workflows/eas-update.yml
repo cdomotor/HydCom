@@ -23,6 +23,12 @@ jobs:
       - name: Install expo-updates (if needed)
         run: npx expo install expo-updates
 
+      - name: Install react-native-reanimated
+        run: npx expo install react-native-reanimated
+
+      - name: Install expo-camera
+        run: npx expo install expo-camera
+
       - name: Prebuild
         run: CI=1 npx expo prebuild
 
