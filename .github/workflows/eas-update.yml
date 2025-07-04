@@ -29,6 +29,12 @@ jobs:
       - name: Install expo-camera
         run: npx expo install expo-camera
 
+      - name: Install additional Expo packages
+        run: |
+          npx expo install expo-location expo-file-system expo-media-library \
+            expo-barcode-scanner expo-sqlite expo-sensors expo-status-bar \
+            expo-gl expo-three
+
       - name: Prebuild
         run: CI=1 npx expo prebuild
 
