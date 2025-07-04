@@ -1,6 +1,16 @@
 # HydCom
 Hydrogropher's Companion App
 
+## Getting Started
+
+After cloning or pulling new updates, install dependencies to ensure all required modules (like `tslib`) are present:
+
+```bash
+npm install
+```
+
+This step is required whenever `package.json` changes.
+
 ## Troubleshooting Camera Issues
 
 If the camera view shows a blank screen even after granting permissions:
