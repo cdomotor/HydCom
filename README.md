@@ -21,6 +21,14 @@ import 'react-native-reanimated';
 
 This step is required whenever `package.json` changes.
 
+## Encrypted Data Storage
+
+The app now stores sample and survey data using AES encryption so it works in
+Expo Go without extra native modules. Data files are saved under the app's
+document directory as `samples.enc` and `surveys.enc`. The encryption key is a
+static placeholder found in `src/utils/cryptoUtils.js`—replace it with your own
+secret for production use.
+
 ## Troubleshooting Camera Issues
 
 If the camera view shows a blank screen even after granting permissions:
