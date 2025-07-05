@@ -83,7 +83,7 @@ export default function App() {
   };
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary logToFile>
       <ScrollView style={styles.container}>
       <StatusBar style="auto" />
       
