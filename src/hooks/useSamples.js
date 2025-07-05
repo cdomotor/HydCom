@@ -1,8 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import { encryptString, decryptString } from '../utils/cryptoUtils';
+
+const DATA_FILE = FileSystem.documentDirectory + 'samples.enc';
 
 const useSamples = () => {
   const [samples, setSamples] = useState([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const info = await FileSystem.getInfoAsync(DATA_FILE);
+        if (info.exists) {
+          const encrypted = await FileSystem.readAsStringAsync(DATA_FILE);
+          const json = JSON.parse(decryptString(encrypted));
+          setSamples(json);
+        }
+      } catch (e) {
+        console.log('Failed to load samples', e);
+      }
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    const save = async () => {
+      try {
+        const encrypted = encryptString(JSON.stringify(samples));
+        await FileSystem.writeAsStringAsync(DATA_FILE, encrypted);
+      } catch (e) {
+        console.log('Failed to save samples', e);
+      }
+    };
+    save();
+  }, [samples]);
 
   const addSample = (sampleData, location) => {
     if (!location) {
