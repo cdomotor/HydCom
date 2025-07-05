@@ -18,7 +18,7 @@ jobs:
         run: npm ci || npm install
 
       - name: Install expo-cli and eas-cli
-        run: npm install -g expo-cli eas-cli
+        run: npm install -g expo-cli@6.3.10 eas-cli@16.13.4
 
       - name: Install expo-updates (if needed)
         run: npx expo install expo-updates
