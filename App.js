@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Text, Button } from 'react-native';
+import { ScrollView, View, Text, Button, ErrorUtils } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 // Components
@@ -9,6 +9,8 @@ import SurveyForm from './src/components/SurveyForm';
 import DataExport from './src/components/DataExport';
 import SunTracker3D from './src/components/SunTracker3D';
 import CameraCapture from './src/components/CameraCapture';
+import ErrorBoundary from './components/ErrorBoundary';
+import * as Sentry from 'sentry-expo';
 
 // Hooks
 import useLocation from './src/hooks/useLocation';
@@ -17,6 +19,42 @@ import useSurveys from './src/hooks/useSurveys';
 
 // Styles
 import { styles } from './src/styles/AppStyles';
+
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    enableInExpoDevelopment: true,
+    debug: true
+  });
+} else {
+  console.warn('Missing EXPO_PUBLIC_SENTRY_DSN environment variable');
+}
+
+if (!process.env.EXPO_PUBLIC_SOME_KEY) {
+  console.warn('Missing EXPO_PUBLIC_SOME_KEY environment variable');
+}
+
+const originalWarn = console.warn;
+console.warn = (...args) => {
+  originalWarn(...args);
+  Sentry.Native.captureMessage('[warn] ' + args.join(' '));
+};
+
+const originalError = console.error;
+console.error = (...args) => {
+  originalError(...args);
+  Sentry.Native.captureException(new Error(args.join(' ')));
+};
+
+const defaultHandler =
+  ErrorUtils.getGlobalHandler && ErrorUtils.getGlobalHandler();
+if (ErrorUtils.setGlobalHandler) {
+  ErrorUtils.setGlobalHandler((error, isFatal) => {
+    if (defaultHandler) defaultHandler(error, isFatal);
+    Sentry.Native.captureException(error);
+  });
+}
 
 export default function App() {
   // UI State
@@ -45,7 +83,8 @@ export default function App() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ErrorBoundary>
+      <ScrollView style={styles.container}>
       <StatusBar style="auto" />
       
       <Text style={styles.title}>Hydrographer's Companion</Text>
@@ -147,5 +186,6 @@ export default function App() {
         onClose={() => setShowCamera(false)}
       />
     </ScrollView>
+    </ErrorBoundary>
   );
 }
