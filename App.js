@@ -1,13 +1,11 @@
 import React from 'react';
-import { View, Text, Button, ErrorUtils } from 'react-native';
+import { ErrorUtils } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 // Components
 import ErrorBoundary from './components/ErrorBoundary';
+import MainNavigator from './src/navigation/MainNavigator';
 import * as Sentry from 'sentry-expo';
-
-// Styles
-import { styles } from './src/styles/AppStyles';
 
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 if (SENTRY_DSN) {
@@ -48,24 +46,8 @@ if (ErrorUtils.setGlobalHandler) {
 export default function App() {
   return (
     <ErrorBoundary logToFile>
-      <View style={styles.menuContainer}>
-        <StatusBar style="auto" />
-        <Text style={styles.menuTitle}>HydCom</Text>
-        <View style={styles.menuButtons}>
-          <View style={styles.menuButton}>
-            <Button title="Location" onPress={() => {}} />
-          </View>
-          <View style={styles.menuButton}>
-            <Button title="Surveying" onPress={() => {}} />
-          </View>
-          <View style={styles.menuButton}>
-            <Button title="Sampling" onPress={() => {}} />
-          </View>
-          <View style={styles.menuButton}>
-            <Button title="Camera" onPress={() => {}} />
-          </View>
-        </View>
-      </View>
+      <StatusBar style="auto" />
+      <MainNavigator />
     </ErrorBoundary>
   );
 }
