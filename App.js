@@ -1,15 +1,12 @@
 import React from 'react';
+import { View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-
-// Components
-import ErrorBoundary from './components/ErrorBoundary';
-import MainNavigator from './src/navigation/MainNavigator';
 
 export default function App() {
   return (
-    <ErrorBoundary logToFile>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
       <StatusBar style="auto" />
-      <MainNavigator />
-    </ErrorBoundary>
+      <Text>Hydrographer's Companion</Text>
+    </View>
   );
 }
