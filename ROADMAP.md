@@ -11,11 +11,12 @@ This document tracks upcoming features, ideas, and completed work for the HydCom
 - [ ] RTK GPS Integration with Sub-centimeter Precision  
 - [ ] Offline Vector Map Support (Stream Prioritization with Names)  
 - [ ] Image Capture with Compass, Notes, and GPS Watermark  
-- [ ] Stream Cross-Section Visualization with Live Wetted Area  
+- [ ] Stream Cross-Section Visualization
 - [ ] Benchmark Point GPS Offset and Elevation Assist  
 - [ ] 3D Sun Path Rendering with Seasonal Arcs
 - [ ] Weather
 - [ ] Cell tower proximity
+- [ ] Station creation and search
 
 ## ⚙️ In Progress
 
@@ -23,14 +24,13 @@ This document tracks upcoming features, ideas, and completed work for the HydCom
 - [ ] SurveyForm UI Cleanup (rename distance to chain, elevation box, simplify workflow)  
 - [ ] Camera Bug Fix: Black screen on second capture  
 - [ ] Auto-ID and Timestamp for Sample Collection
-
 - [ ] Survey Misclose Calculation and Warning   
 - [ ] Export Samples and Surveys to CSV (DataExport.js)   
-- [ ] GPS Accuracy Indicator and Live Heading   
+- [ ] GPS Accuracy Indicator
 - [ ] Digital Compass with Magnetic and True Readouts   
 - [ ] Barcode Scan Integration for Sample Bottles 
 
 ## ✅ Completed
-- [ ] Get basic app structure running on Expo GO with AES updates 
+- [ ] Basic app structure running on Expo GO with AES updates 
 
 ---
