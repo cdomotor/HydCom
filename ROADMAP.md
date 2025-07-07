@@ -15,7 +15,7 @@ This document tracks upcoming features, ideas, and completed work for the HydCom
 - [ ] Benchmark Point GPS Offset and Elevation Assist  
 - [ ] 3D Sun Path Rendering with Seasonal Arcs
 - [ ] Weather
-- [ ] 
+- [ ] Cell tower proximity
 
 ## ⚙️ In Progress
 
