@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Button } from 'react-native';
 import * as FileSystem from 'expo-file-system';
-import * as Sentry from 'sentry-expo';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -15,7 +14,6 @@ class ErrorBoundary extends React.Component {
 
   async componentDidCatch(error, errorInfo) {
     console.error('Unhandled error:', error, errorInfo);
-    Sentry.Native.captureException(error);
     if (this.props.logToFile) {
       try {
         const logFile = FileSystem.documentDirectory + 'error-log.txt';

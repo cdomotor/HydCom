@@ -53,8 +53,7 @@
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true
         }
-      ],
-      "sentry-expo"
+      ]
     ],
     "extra": {
       "eas": {
