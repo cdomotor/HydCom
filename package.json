@@ -34,10 +34,14 @@
     "victory-native": "^41.17.4",
     "sentry-expo": "~7.2.0",
     "crypto-js": "^4.2.0",
-    "hermes-engine": "0.11.0"
+    "hermes-engine": "0.11.0",
+    "react-native-is-edge-to-edge": "^1.2.1"
   },
   "devDependencies": {
     "@babel/core": "^7.28.0"
+  },
+  "overrides": {
+    "react-native-is-edge-to-edge": "^1.2.1"
   },
   "private": true
 }
