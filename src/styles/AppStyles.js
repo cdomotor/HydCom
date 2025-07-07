@@ -17,6 +17,31 @@ export const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#333',
   },
+
+  // Main Menu Styles
+  menuContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#f5f5f5',
+  },
+
+  menuTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 40,
+    color: '#333',
+    textAlign: 'center',
+  },
+
+  menuButtons: {
+    width: '80%',
+  },
+
+  menuButton: {
+    marginVertical: 10,
+  },
   
   // Section Styles
   section: {
