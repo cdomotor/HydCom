@@ -1,6 +1,6 @@
 ---
 
-# 🚧 Hydrographer's Companion Roadmap
+# 🚧 HydCom Roadmap
 
 This document tracks upcoming features, ideas, and completed work for the HydCom project.
 
@@ -14,6 +14,8 @@ This document tracks upcoming features, ideas, and completed work for the HydCom
 - [ ] Stream Cross-Section Visualization with Live Wetted Area  
 - [ ] Benchmark Point GPS Offset and Elevation Assist  
 - [ ] 3D Sun Path Rendering with Seasonal Arcs
+- [ ] Weather
+- [ ] 
 
 ## ⚙️ In Progress
 
