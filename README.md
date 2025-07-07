@@ -47,6 +47,3 @@ If the camera view shows a blank screen even after granting permissions:
 
 3. Force quit and reopen the Expo Go app on your device.
 
-### Resolving duplicate React with sentry-expo
-If Metro fails to resolve `./cjs/react.development.js` from `sentry-expo`, the bundler is picking up Sentry's internal copy of React. We provide a `metro.config.js` that aliases `react` to the project's own version. Ensure this file is in the project root and restart `expo start` after running `npm install`.
-
