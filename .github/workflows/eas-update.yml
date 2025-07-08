@@ -19,8 +19,8 @@ jobs:
       - name: Install expo and eas
         run: npm install -g expo-cli eas-cli
 
-      - name: Configure EAS project 
-        run: eas init
+      - name: Login to Expo
+        run: eas login --token ${{ secrets.EXPO_TOKEN }}
 
       - name: Publish to Expo
         run: eas update --auto --branch preview --non-interactive
