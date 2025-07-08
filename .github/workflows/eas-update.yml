@@ -28,21 +28,6 @@ jobs:
       - name: Install expo-cli and eas-cli
         run: npm install -g expo-cli@6.3.10 eas-cli@16.13.4
 
-      - name: Install expo-updates (if needed)
-        run: npx expo install expo-updates
-
-      - name: Install react-native-reanimated
-        run: npx expo install react-native-reanimated
-
-      - name: Install expo-camera
-        run: npx expo install expo-camera
-
-      - name: Install additional Expo packages
-        run: |
-          npx expo install expo-location expo-file-system expo-media-library \
-            expo-barcode-scanner expo-sqlite expo-sensors expo-status-bar \
-            expo-gl expo-three
-
       - name: Prebuild
         run: CI=1 npx expo prebuild
 
