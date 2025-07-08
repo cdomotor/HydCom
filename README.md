@@ -47,3 +47,20 @@ If the camera view shows a blank screen even after granting permissions:
 
 3. Force quit and reopen the Expo Go app on your device.
 
+## React Native Version Mismatch
+
+If you see a "React Native version mismatch" error (for example, JavaScript
+version `0.80.1` while the native runtime reports `0.79.2`), your installed
+Expo Go app is likely out of date. Make sure the version of Expo Go on your
+device matches the SDK version declared in `package.json` (`expo` `53.x`).
+
+1. Update Expo Go from the App Store or Play Store.
+2. Restart the development server with a cleared cache:
+
+   ```bash
+   watchman watch-del-all && npx expo start --clear
+   ```
+
+This ensures the JavaScript bundle uses the same React Native version as the
+native runtime.
+
