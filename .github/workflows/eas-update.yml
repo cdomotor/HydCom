@@ -6,6 +6,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -19,10 +21,6 @@ jobs:
       - name: Install expo and eas
         run: npm install -g expo-cli eas-cli
 
-      - name: Configure EAS project 
-        run: eas init
 
       - name: Publish to Expo
         run: eas update --auto --branch preview --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
