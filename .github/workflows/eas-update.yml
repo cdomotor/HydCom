@@ -6,7 +6,6 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -15,40 +14,12 @@ jobs:
           node-version: 18
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm install
 
-      - name: Install watchman
-        run: sudo apt-get update && sudo apt-get install -y watchman
-
-      - name: Clear Metro and watchman caches
-        run: |
-          watchman watch-del-all
-          timeout 10s npx expo start --clear || true
-
-      - name: Install expo-cli and eas-cli
-        run: npm install -g expo-cli@6.3.10 eas-cli@16.13.4
-
-      - name: Prebuild
-        run: CI=1 npx expo prebuild
-
-      - name: Try get PR title
-        id: get_title
-        run: |
-          echo "Trying to fetch PR title..."
-          title=$(gh pr view --json title -q .title 2>/dev/null || echo "")
-          if [ -z "$title" ]; then
-            echo "No PR found, using latest commit message"
-            title=$(git log -1 --pretty=%s)
-          fi
-          echo "PR_TITLE=$title" >> $GITHUB_ENV
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
-      - name: Stamp app name with PR title and timestamp
-        run: node scripts/stamp-app-name.js
+      - name: Install expo and eas
+        run: npm install -g expo-cli eas-cli
 
       - name: Publish to Expo
-        run: npx eas update --auto --branch preview --non-interactive
+        run: eas update --auto --branch preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

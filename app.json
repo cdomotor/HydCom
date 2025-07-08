@@ -1,64 +1,19 @@
 {
   "expo": {
     "name": "Hydrographer's Companion",
-    "slug": "cdomotor-hydcom",
-    "owner": "cdomotor",
+    "slug": "hydcom",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "updates": {
-      "enabled": true,
-      "fallbackToCacheTimeout": 0
-    },
     "splash": {
       "image": "./assets/hydcom1-splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.hydcom",
-      "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Hydrographer's Companion needs access to your location to record GPS coordinates for survey points and sample collection sites.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Hydrographer's Companion needs access to your location to continuously track your position during field surveys and provide compass heading information.",
-        "NSLocationAlwaysUsageDescription": "Hydrographer's Companion needs background location access to continue tracking during long surveys.",
-        "NSMotionUsageDescription": "Hydrographer's Companion needs access to motion sensors to provide compass heading information."
-      }
+    "updates": {
+      "enabled": false,
+      "fallbackToCacheTimeout": 0
     },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION"
-      ],
-      "package": "com.yourcompany.hydcom"
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      "expo-sqlite",
-      "expo-updates",
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow Hydrographer's Companion to use your location for GPS tracking and compass heading.",
-          "isIosBackgroundLocationEnabled": true,
-          "isAndroidBackgroundLocationEnabled": true
-        }
-      ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "9fca31c8-7031-4bed-bacc-dc24a3e6ff52"
-      }
-    }
+    "assetBundlePatterns": ["**/*"]
   }
 }
